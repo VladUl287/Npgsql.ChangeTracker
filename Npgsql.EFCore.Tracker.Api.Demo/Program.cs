@@ -19,6 +19,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 var app = builder.Build();
 {
+    app.UseTracker<DatabaseContext>();
+
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi();
