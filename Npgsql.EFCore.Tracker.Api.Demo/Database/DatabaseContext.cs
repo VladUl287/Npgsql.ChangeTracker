@@ -12,10 +12,11 @@ public sealed class DatabaseContext(DbContextOptions<DatabaseContext> options) :
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Role>(builder =>
-        {
-            builder.HasKey(c => c.Id);
-            builder.EnableTracking();
-        });
+        modelBuilder
+            .Entity<Role>(builder =>
+            {
+                builder.HasKey(c => c.Id);
+            })
+            .EnableTracking<Role>();
     }
 }

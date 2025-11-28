@@ -20,8 +20,9 @@ var builder = WebApplication.CreateBuilder(args);
             .EnableDetailedErrors();
 
         options
-            .ReplaceService<IMigrationsModelDiffer, CustomMigrationsModelDiffer>()
-            .ReplaceService<IMigrationsSqlGenerator, CustomNpgsqlMigrationsSqlGenerator>();
+            .ReplaceService<IMigrationsModelDiffer, TrackingMigrationsModelDiffer>()
+            .ReplaceService<IMigrationsSqlGenerator, CustomNpgsqlMigrationsSqlGenerator>()
+            ;
     });
 
     builder.Services.AddTrackerSupport(Assembly.GetExecutingAssembly());
