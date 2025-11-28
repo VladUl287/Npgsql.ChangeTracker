@@ -22,8 +22,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 var app = builder.Build();
 {
-    app.UseTracker<DatabaseContext>();
-
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi();
@@ -32,6 +30,8 @@ var app = builder.Build();
     app.UseHttpsRedirection();
 
     app.UseAuthorization();
+
+    app.UseTracker<DatabaseContext>();
 
     app.MapControllers();
 }
