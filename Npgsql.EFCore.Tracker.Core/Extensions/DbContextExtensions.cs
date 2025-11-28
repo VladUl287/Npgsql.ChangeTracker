@@ -103,10 +103,8 @@ public static class DbContextExtensions
 
         var database = dbContext.Database;
         var connection = database.GetDbConnection();
-        var transaction = database.CurrentTransaction?.GetDbTransaction();
 
         await using var command = connection.CreateCommand();
-        command.Transaction = transaction;
 
         await connection.OpenAsync(token);
 
