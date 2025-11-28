@@ -8,9 +8,9 @@ public class DefaultActionsRegistry : IActionsRegistry
 {
     private readonly FrozenDictionary<string, ActionDescriptor> _store;
 
-    public DefaultActionsRegistry(params ActionDescriptor[] descriptors)
+    public DefaultActionsRegistry(IEnumerable<ActionDescriptor> descriptors)
     {
-        var store = new Dictionary<string, ActionDescriptor>(descriptors.Length);
+        var store = new Dictionary<string, ActionDescriptor>();
         foreach (var descriptor in descriptors)
             store[descriptor.Route] = descriptor;
         _store = store.ToFrozenDictionary();

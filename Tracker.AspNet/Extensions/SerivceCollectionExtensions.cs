@@ -26,42 +26,14 @@ public static class SerivceCollectionExtensions
         services.AddSingleton<IETagGenerator, ETagGenerator>();
         services.AddSingleton<IETagService, ETagService<TContext>>();
 
+        services.AddSingleton<IActionsDescriptorProvider, DefaultActionsDescriptorProvider>();
         services.AddSingleton<IActionsRegistry, DefaultActionsRegistry>(provider =>
         {
-            var descriptors = GetActionsDescriptors(assemblies);
+            var descriptorProvider = provider.GetRequiredService<IActionsDescriptorProvider>();
+            var descriptors = descriptorProvider.GetActionsDescriptors(assemblies);
             return new DefaultActionsRegistry(descriptors);
         });
 
         return services;
-    }
-
-    private static ActionDescriptor[] GetActionsDescriptors(params Assembly[] assemblies)
-    {
-        var result = new List<ActionDescriptor>();
-        foreach (var assembly in assemblies)
-        {
-            var types = assembly.GetTypes();
-
-            foreach (var typ in types)
-            {
-                var methods = typ.GetMethods(BindingFlags.Public | BindingFlags.Instance);
-
-                foreach (var method in methods)
-                {
-                    var trackAttr = method.GetCustomAttribute<TrackAttribute>();
-
-                    if (trackAttr is not null)
-                    {
-                        result.Add(new ActionDescriptor
-                        {
-                            Route = trackAttr.Route,
-                            Tables = trackAttr.Tables
-                        });
-                    }
-                }
-            }
-        }
-
-        return result.ToArray();
     }
 }
