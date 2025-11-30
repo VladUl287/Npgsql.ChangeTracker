@@ -66,9 +66,12 @@ public class DefaultActionsDescriptorProvider<TContext>(
             var minimalApiTracking = routeEndpoint.Metadata.GetMetadata<TrackRouteMetadata>();
             if (minimalApiTracking is not null && routeEndpoint is { RoutePattern.RawText: not null })
             {
+                var route = routeEndpoint.RoutePattern.RawText ?? minimalApiTracking.Route ??
+                    throw new NullReferenceException($"Route for '{routeEndpoint.DisplayName}' not found.");
+
                 yield return new ActionDescriptor
                 {
-                    Route = routeEndpoint.RoutePattern.RawText,
+                    Route = route,
                     Tables = minimalApiTracking.Tables ?? []
                 };
             }
