@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
 using Tracker.AspNet.Attributes;
@@ -10,11 +11,14 @@ using Tracker.AspNet.Services.Contracts;
 namespace Tracker.AspNet.Services;
 
 public class DefaultActionsDescriptorProvider<TContext>(
-    EndpointDataSource endpDataSrc, TContext context, ILogger<DefaultActionsDescriptorProvider<TContext>> logger) : IActionsDescriptorProvider
+    EndpointDataSource endpDataSrc, IServiceScopeFactory scopeFactory, ILogger<DefaultActionsDescriptorProvider<TContext>> logger) : IActionsDescriptorProvider
     where TContext : DbContext
 {
     public virtual IEnumerable<ActionDescriptor> GetActionsDescriptors(params Assembly[] assemblies)
     {
+        using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<TContext>();
+
         foreach (var endpoint in endpDataSrc.Endpoints)
         {
             if (endpoint is not RouteEndpoint routeEndpoint)
@@ -30,7 +34,7 @@ public class DefaultActionsDescriptorProvider<TContext>(
                 var route = routeEndpoint.RoutePattern.RawText ?? controllerTracking.Route ??
                     throw new NullReferenceException($"Route for '{routeEndpoint.DisplayName}' not found.");
 
-                string[] tables = ResolveTables(controllerTracking.Tables, controllerTracking.Entities);
+                string[] tables = ResolveTables(dbContext, controllerTracking.Tables, controllerTracking.Entities);
                 yield return new ActionDescriptor
                 {
                     Route = route,
@@ -44,7 +48,7 @@ public class DefaultActionsDescriptorProvider<TContext>(
                 var route = routeEndpoint.RoutePattern.RawText ?? trackRouteMetadata.Route ??
                     throw new NullReferenceException($"Route for '{routeEndpoint.DisplayName}' not found.");
 
-                string[] tables = ResolveTables(trackRouteMetadata.Tables, trackRouteMetadata.Entities);
+                string[] tables = ResolveTables(dbContext,trackRouteMetadata.Tables, trackRouteMetadata.Entities);
                 yield return new ActionDescriptor
                 {
                     Route = route,
@@ -54,7 +58,7 @@ public class DefaultActionsDescriptorProvider<TContext>(
         }
     }
 
-    private string[] ResolveTables(string[]? tables, Type[]? entities)
+    private string[] ResolveTables(TContext context, string[]? tables, Type[]? entities)
     {
         var result = new HashSet<string>();
 
