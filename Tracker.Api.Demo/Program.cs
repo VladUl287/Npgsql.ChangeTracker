@@ -32,7 +32,7 @@ var app = builder.Build();
     app.UseTracker<DatabaseContext>();
 
     app.MapGet("/api/users", () => "Get all users")
-        .WithTracking("roles");
+        .WithTracking(tables: ["roles"]);
 
     app.MapControllers();
 }

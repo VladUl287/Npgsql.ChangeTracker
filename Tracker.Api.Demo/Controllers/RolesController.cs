@@ -11,7 +11,7 @@ namespace Tracker.Api.Demo.Controllers;
 public class RolesController(DatabaseContext dbContext) : ControllerBase
 {
     [HttpGet]
-    [Track("/roles/getall", "roles")]
+    [Track(route: "/roles/getall", tables: ["roles"])]
     public ActionResult<IEnumerable<Role>> GetAll()
     {
         return dbContext.Roles.ToList();

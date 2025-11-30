@@ -27,7 +27,8 @@ public class ETagService<TContext>(
             return false;
         }
 
-        var lastTimestamp = await dbContext.GetLastTimestamp(descriptor.Tables, token);
+        var table = descriptor.Tables[0];
+        var lastTimestamp = await dbContext.GetLastTimestamp(table, token);
         if (string.IsNullOrEmpty(lastTimestamp))
         {
             logger.LogLastTimestampNotFound();
