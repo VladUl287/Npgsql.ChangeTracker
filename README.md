@@ -6,3 +6,4 @@ TODO:
     - Add last commit modes "Global last commit" or "Table specific last commit"
     - Add last commit support to route groups like in Delta
     - Multiple DbContext support
+    - Wildcard routes support https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/route-handlers?view=aspnetcore-10.0#wildcard-and-catch-all-routes
