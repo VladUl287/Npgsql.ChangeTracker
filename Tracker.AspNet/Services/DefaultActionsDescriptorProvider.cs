@@ -30,7 +30,7 @@ public class DefaultActionsDescriptorProvider(EndpointDataSource endpointRouteBu
                 yield return new ActionDescriptor
                 {
                     Route = routeEndpoint.RoutePattern.RawText ?? controllerTracking.Route,
-                    Tables = controllerTracking.Tables
+                    Tables = controllerTracking.Tables ?? []
                 };
             }
 
@@ -40,7 +40,7 @@ public class DefaultActionsDescriptorProvider(EndpointDataSource endpointRouteBu
                 yield return new ActionDescriptor
                 {
                     Route = routeEndpoint.RoutePattern.RawText,
-                    Tables = minimalApiTracking.Tables
+                    Tables = [minimalApiTracking.Tables]
                 };
             }
         }
