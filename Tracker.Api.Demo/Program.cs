@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using System.Reflection;
 using Tracker.Api.Demo.Database;
 using Tracker.Api.Demo.Database.Entities;
 using Tracker.AspNet.Extensions;
@@ -11,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
     builder.Services.AddOpenApi();
 
     builder.Services
-        .AddTracker<DatabaseContext>(Assembly.GetExecutingAssembly())
+        .AddTracker<DatabaseContext>()
         .AddDbContext<DatabaseContext>(options =>
         {
             options
