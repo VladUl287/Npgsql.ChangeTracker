@@ -19,22 +19,7 @@ public sealed class TrackAttribute : Attribute, IAsyncActionFilter
         Tables = tables;
     }
 
-    public TrackAttribute(Type[] entities)
-    {
-        ArgumentNullException.ThrowIfNull(entities, nameof(entities));
-        Entities = entities;
-    }
-
-    public TrackAttribute(string[] tables, Type[] entities)
-    {
-        ArgumentNullException.ThrowIfNull(tables, nameof(tables));
-        ArgumentNullException.ThrowIfNull(entities, nameof(entities));
-        Tables = tables;
-        Entities = entities;
-    }
-
     public string[] Tables { get; } = [];
-    public Type[] Entities { get; } = [];
 
     public async Task OnResultExecutionAsync(ResultExecutingContext context, ResultExecutionDelegate next)
     {
@@ -67,7 +52,7 @@ public sealed class TrackAttribute : Attribute, IAsyncActionFilter
     public Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next) => Task.CompletedTask;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool IsGlobalRequest() => Tables is null or { Length: 0 } && Entities is null or { Length: 0 };
+    private bool IsGlobalRequest() => Tables is null or { Length: 0 };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsGetMethod(HttpContext context) => context.Request.Method == HttpMethod.Get.Method;
