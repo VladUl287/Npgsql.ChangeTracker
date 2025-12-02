@@ -11,9 +11,17 @@ namespace Tracker.AspNet.Extensions;
 
 public static class SerivceCollectionExtensions
 {
+    public static IServiceCollection AddTracker<TContext>(this IServiceCollection services)
+        where TContext : DbContext
+    {
+        return services.AddTracker<TContext>(new GlobalOptions());
+    }
+
     public static IServiceCollection AddTracker<TContext>(this IServiceCollection services, GlobalOptions options)
          where TContext : DbContext
     {
+        ArgumentNullException.ThrowIfNull(options, nameof(options));
+
         services.AddSingleton(options);
 
         services.AddSingleton<IETagGenerator, ETagGenerator>();
@@ -22,15 +30,11 @@ public static class SerivceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddTracker<TContext>(this IServiceCollection services)
-         where TContext : DbContext
-    {
-        return services.AddTracker<TContext>(new GlobalOptions());
-    }
-
     public static IServiceCollection AddTracker<TContext>(this IServiceCollection services, Action<GlobalOptions> configure)
          where TContext : DbContext
     {
+        ArgumentNullException.ThrowIfNull(configure, nameof(configure));
+
         var options = new GlobalOptions();
         configure(options);
         return services.AddTracker<TContext>(options);
