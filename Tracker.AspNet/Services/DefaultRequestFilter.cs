@@ -10,39 +10,7 @@ namespace Tracker.AspNet.Services;
 
 public class DefaultRequestFilter(ILogger<DefaultRequestFilter> logger) : IRequestFilter
 {
-    public virtual bool ShouldProcessRequest<TState>(HttpContext context, Func<GlobalOptions> optionsProvider)
-    {
-        if (!IsValidContextState(context))
-            return false;
-
-        var options = optionsProvider();
-        if (!options.Filter(context))
-        {
-            logger.LogFilterRejected(context.Request.Path);
-            return false;
-        }
-
-        logger.LogRequestValidated(context.Request.Path);
-        return true;
-    }
-
     public virtual bool ShouldProcessRequest<TState>(HttpContext context, Func<TState, GlobalOptions> optionsProvider, TState state)
-    {
-        if (!IsValidContextState(context))
-            return false;
-
-        var options = optionsProvider(state);
-        if (!options.Filter(context))
-        {
-            logger.LogFilterRejected(context.Request.Path);
-            return false;
-        }
-
-        logger.LogRequestValidated(context.Request.Path);
-        return true;
-    }
-
-    private bool IsValidContextState(HttpContext context)
     {
         if (!HttpMethods.IsGet(context.Request.Method))
         {
@@ -62,6 +30,14 @@ public class DefaultRequestFilter(ILogger<DefaultRequestFilter> logger) : IReque
             return false;
         }
 
+        var options = optionsProvider(state);
+        if (!options.Filter(context))
+        {
+            logger.LogFilterRejected(context.Request.Path);
+            return false;
+        }
+
+        logger.LogRequestValidated(context.Request.Path);
         return true;
     }
 
