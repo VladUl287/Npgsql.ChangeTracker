@@ -26,6 +26,8 @@ public static class SerivceCollectionExtensions
         services.AddSingleton<IETagGenerator, ETagGenerator>();
         services.AddSingleton<IETagService, ETagService<TContext>>();
 
+        services.AddSingleton<IRequestFilter, DefaultRequestFilter>();
+
         return services;
     }
 
