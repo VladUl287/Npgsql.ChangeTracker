@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Tracker.AspNet.Extensions;
 using Tracker.AspNet.Logging;
 using Tracker.AspNet.Models;
 using Tracker.AspNet.Services.Contracts;
@@ -13,7 +12,7 @@ public class DefaultRequestFilter(ILogger<DefaultRequestFilter> logger) : IReque
     {
         var requestPath = context.Request.Path;
 
-        if (!context.IsGetRequest())
+        if (!HttpMethods.IsGet(context.Request.Method))
         {
             logger.LogNotGetRequest(context.Request.Method, requestPath);
             return false;
