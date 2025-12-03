@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Collections.Immutable;
 using Tracker.AspNet.Logging;
 using Tracker.AspNet.Models;
 using Tracker.AspNet.Services.Contracts;
@@ -12,7 +13,7 @@ namespace Tracker.AspNet.Services;
 public class ETagService<TContext>(
     IETagGenerator etagGenerator, ILogger<ETagService<TContext>> logger) : IETagService where TContext : DbContext
 {
-    public async Task<bool> TrySetETagAsync(HttpContext context, GlobalOptions options, CancellationToken token = default)
+    public async Task<bool> TrySetETagAsync(HttpContext context, ImmutableGlobalOptions options, CancellationToken token = default)
     {
         ArgumentNullException.ThrowIfNull(context, nameof(context));
         ArgumentNullException.ThrowIfNull(options, nameof(options));
@@ -49,9 +50,9 @@ public class ETagService<TContext>(
         return false;
     }
 
-    private async Task<string?> GenerateETag(string[] tables, TContext dbContext, CancellationToken token)
+    private async Task<string?> GenerateETag(ImmutableArray<string> tables, TContext dbContext, CancellationToken token)
     {
-        if (tables is null or { Length: 0 })
+        if (tables is { Length: 0 })
         {
             var xact = await dbContext.GetLastCommittedXact(token);
             if (xact is null)

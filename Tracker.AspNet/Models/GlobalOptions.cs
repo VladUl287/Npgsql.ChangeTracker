@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using System.Collections.Immutable;
 
 namespace Tracker.AspNet.Models;
 
@@ -13,17 +14,16 @@ public sealed class GlobalOptions
     public TimeSpan TablesCacheLifeTime { get; set; }
 
     public Func<HttpContext, string> Suffix { get; set; } = (_) => string.Empty;
+}
 
-    public GlobalOptions Copy()
-    {
-        return new GlobalOptions
-        {
-            Filter = Filter,
-            Tables = Tables?.ToArray() ?? [],
-            Entities = Entities?.ToArray() ?? [],
-            XactCacheLifeTime = XactCacheLifeTime,
-            TablesCacheLifeTime = TablesCacheLifeTime,
-            Suffix = Suffix
-        };
-    }
+public sealed record ImmutableGlobalOptions
+{
+    public Func<HttpContext, bool> Filter { get; init; } = (_) => true;
+
+    public ImmutableArray<string> Tables { get; init; } = [];
+
+    public TimeSpan XactCacheLifeTime { get; init; }
+    public TimeSpan TablesCacheLifeTime { get; init; }
+
+    public Func<HttpContext, string> Suffix { get; init; } = (_) => string.Empty;
 }

@@ -10,7 +10,10 @@ var builder = WebApplication.CreateBuilder(args);
     builder.Services.AddOpenApi();
 
     builder.Services
-        .AddTracker<DatabaseContext>()
+        .AddTracker<DatabaseContext>(conf =>
+        {
+            conf.XactCacheLifeTime = TimeSpan.FromDays(1);
+        })
         .AddDbContext<DatabaseContext>(options =>
         {
             options
@@ -33,9 +36,13 @@ var app = builder.Build();
     {
         opt.Tables = ["roles"];
         opt.Entities = [typeof(Role)];
+        opt.Filter = (ctx) => ctx.Request.Path.ToString().Contains("roles");
     });
 
     app.MapGet("/api/role", () => "Get all roles")
+        .WithTracking();
+
+    app.MapGet("/api/v2/role", () => "Get all roles")
         .WithTracking<DatabaseContext>((opt) =>
         {
             opt.Tables = ["roles"];
