@@ -1,29 +1,31 @@
-﻿using Microsoft.AspNetCore.Http;
-using Tracker.AspNet.Extensions;
-using Tracker.AspNet.Models;
+﻿using Tracker.AspNet.Models;
+using Microsoft.AspNetCore.Http;
 using Tracker.AspNet.Services.Contracts;
 
 namespace Tracker.AspNet.Middlewares;
 
-public sealed class TrackerMiddleware(RequestDelegate next, IETagService eTagService, ImmutableGlobalOptions opts)
+public sealed class TrackerMiddleware(
+    RequestDelegate next, IRequestFilter requestFilter, IETagService eTagService,
+    ImmutableGlobalOptions opts)
 {
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext ctx)
     {
-        if (!context.IsGetRequest())
+        var shouldProcessRequest = requestFilter.ShouldProcessRequest(ctx, opts);
+        if (!shouldProcessRequest)
         {
-            await next(context);
+            await next(ctx);
             return;
         }
 
-        var token = context.RequestAborted;
+        var token = ctx.RequestAborted;
+        if (token.IsCancellationRequested)
+            return;
 
-        var shouldReturnNotModified = await eTagService.TrySetETagAsync(context, opts, token);
-        if (shouldReturnNotModified)
+        var shouldReturnNotModified = await eTagService.TrySetETagAsync(ctx, opts, token);
+        if (!shouldReturnNotModified)
         {
-            context.Response.StatusCode = StatusCodes.Status304NotModified;
+            await next(ctx);
             return;
         }
-
-        await next(context);
     }
 }
