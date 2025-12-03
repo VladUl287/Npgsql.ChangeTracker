@@ -24,23 +24,26 @@ public sealed class TrackAttribute : Attribute, IAsyncActionFilter
 
     public async Task OnActionExecutionAsync(ActionExecutingContext execContext, ActionExecutionDelegate next)
     {
-        static bool filter(HttpContext ctx) => ctx.RequestServices.GetRequiredService<ImmutableGlobalOptions>().Filter(ctx);
+        static ImmutableGlobalOptions optionsProvider(HttpContext ctx) => ctx.RequestServices.GetRequiredService<ImmutableGlobalOptions>();
 
         var context = execContext.HttpContext;
 
         var requestFilter = context.RequestServices.GetRequiredService<IRequestFilter>();
-        var shouldProcessRequest = requestFilter.ShouldProcessRequest(context, filter, context);
+        var shouldProcessRequest = requestFilter.ShouldProcessRequest(context, optionsProvider, context);
         if (!shouldProcessRequest)
         {
             await next();
             return;
         }
 
-        var options = context.RequestServices.GetRequiredService<ImmutableGlobalOptions>();
-        options = options with
+        var options = optionsProvider(context);
+        if (Tables is { Length: > 0 })
         {
-            Tables = [.. Tables]
-        };
+            options = options with
+            {
+                Tables = [.. Tables]
+            };
+        }
 
         var etagService = execContext.HttpContext.RequestServices.GetRequiredService<IETagService>();
         var token = execContext.HttpContext.RequestAborted;
