@@ -18,12 +18,6 @@ public class ETagService<TContext>(
         ArgumentNullException.ThrowIfNull(context, nameof(context));
         ArgumentNullException.ThrowIfNull(options, nameof(options));
 
-        if (context.Response.Headers.ETag.Count != 0)
-        {
-            logger.LogETagAlreadyExists();
-            return false;
-        }
-
         var dbContext = context.RequestServices.GetService<TContext>();
         if (dbContext is null)
         {
@@ -41,6 +35,7 @@ public class ETagService<TContext>(
         if (context.Request.Headers.IfNoneMatch == etag)
         {
             logger.LogNotModified(etag);
+            context.Response.StatusCode = StatusCodes.Status304NotModified;
             return true;
         }
 

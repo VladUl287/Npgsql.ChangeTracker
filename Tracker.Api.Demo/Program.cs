@@ -32,27 +32,27 @@ var app = builder.Build();
 
     app.UseAuthorization();
 
-    app.UseTracker<DatabaseContext>(opt =>
-    {
-        opt.Tables = ["roles"];
-        opt.Entities = [typeof(Role)];
-        opt.Filter = (ctx) => ctx.Request.Path.ToString().Contains("roles");
-    });
+    //app.UseTracker<DatabaseContext>(opt =>
+    //{
+    //    opt.Tables = ["roles"];
+    //    opt.Entities = [typeof(Role)];
+    //    opt.Filter = (ctx) => ctx.Request.Path.ToString().Contains("roles");
+    //});
 
-    app.MapGet("/api/role", () => "Get all roles")
-        .WithTracking();
+    //app.MapGet("/api/role", () => "Get all roles")
+    //    .WithTracking();
 
-    app.MapGet("/api/v2/role", () => "Get all roles")
-        .WithTracking<DatabaseContext>((opt) =>
-        {
-            opt.Tables = ["roles"];
-        });
+    //app.MapGet("/api/v2/role", () => "Get all roles")
+    //    .WithTracking<DatabaseContext>((opt) =>
+    //    {
+    //        opt.Tables = ["roles"];
+    //    });
 
-    app.MapGet("/api/role/table", () => "Get all roles with table")
-        .WithTracking<DatabaseContext>((opt) =>
-        {
-            opt.Entities = [typeof(Role)];
-        });
+    //app.MapGet("/api/role/table", () => "Get all roles with table")
+    //    .WithTracking<DatabaseContext>((opt) =>
+    //    {
+    //        opt.Entities = [typeof(Role)];
+    //    });
 
     app.MapControllers();
 }

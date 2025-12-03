@@ -24,7 +24,7 @@ public sealed class DefaultRequestFilter(ILogger<DefaultRequestFilter> logger) :
             return false;
         }
 
-        if (HasImmutableCacheControl(context.Response.Headers.CacheControl))
+        if (HasNotValidCacheControl(context.Response.Headers.CacheControl))
         {
             logger.LogImmutableCacheDetected(context.Request.Path);
             return false;
@@ -42,15 +42,16 @@ public sealed class DefaultRequestFilter(ILogger<DefaultRequestFilter> logger) :
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool HasImmutableCacheControl(StringValues cacheControlHeaders)
+    private static bool HasNotValidCacheControl(StringValues cacheControlHeaders)
     {
         if (cacheControlHeaders.Count == 0)
             return false;
 
         const string IMMUTABLE = "immutable";
+        const string NO_STORE = "no-store";
         foreach (var header in cacheControlHeaders)
         {
-            if (header is not null && header.Contains(IMMUTABLE))
+            if (header is not null && (header.Contains(IMMUTABLE) || header.Contains(NO_STORE)))
                 return true;
         }
 

@@ -24,37 +24,35 @@ public sealed class TrackAttribute : Attribute, IAsyncActionFilter
 
     public async Task OnActionExecutionAsync(ActionExecutingContext execContext, ActionExecutionDelegate next)
     {
-        static ImmutableGlobalOptions optionsProvider(HttpContext ctx) => ctx.RequestServices.GetRequiredService<ImmutableGlobalOptions>();
+        static ImmutableGlobalOptions OptionsProvider(HttpContext ctx) => ctx.RequestServices.GetRequiredService<ImmutableGlobalOptions>();
 
-        var context = execContext.HttpContext;
+        var httpCtx = execContext.HttpContext;
 
-        var requestFilter = context.RequestServices.GetRequiredService<IRequestFilter>();
-        var shouldProcessRequest = requestFilter.ShouldProcessRequest(context, optionsProvider, context);
+        var requestFilter = httpCtx.RequestServices.GetRequiredService<IRequestFilter>();
+        var shouldProcessRequest = requestFilter.ShouldProcessRequest(httpCtx, OptionsProvider, httpCtx);
         if (!shouldProcessRequest)
         {
             await next();
             return;
         }
 
-        var options = optionsProvider(context);
+        var options = OptionsProvider(httpCtx);
         if (Tables is { Length: > 0 })
         {
             options = options with
             {
-                Tables = [.. Tables]
+                Tables = Tables
             };
         }
 
         var etagService = execContext.HttpContext.RequestServices.GetRequiredService<IETagService>();
         var token = execContext.HttpContext.RequestAborted;
 
-        var shouldReturnNotModified = await etagService.TrySetETagAsync(execContext.HttpContext, options, token);
-        if (shouldReturnNotModified)
+        var shouldReturnNotModified = await etagService.TrySetETagAsync(httpCtx, options, token);
+        if (!shouldReturnNotModified)
         {
-            execContext.Result = new StatusCodeResult(StatusCodes.Status304NotModified);
+            await next();
             return;
         }
-
-        await next();
     }
 }
