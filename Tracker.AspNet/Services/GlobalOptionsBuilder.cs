@@ -14,6 +14,7 @@ public sealed class GlobalOptionsBuilder(IServiceScopeFactory scopeFactory) : IO
         return new ImmutableGlobalOptions
         {
             Source = options.Source,
+            SourceOperations = options.SourceOperations,
             Filter = options.Filter,
             Suffix = options.Suffix,
             Tables = [.. options.Tables],
@@ -37,6 +38,7 @@ public sealed class GlobalOptionsBuilder(IServiceScopeFactory scopeFactory) : IO
         return new ImmutableGlobalOptions
         {
             Source = source,
+            SourceOperations = options.SourceOperations,
             Filter = options.Filter,
             Suffix = options.Suffix,
             Tables = tables,

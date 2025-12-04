@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Collections.Immutable;
+using Tracker.AspNet.Services.Contracts;
 
 namespace Tracker.AspNet.Models;
 
 public sealed class GlobalOptions
 {
-    public string Source { get; init; } = string.Empty;
+    public string? Source { get; set; }
+    public ISourceOperations? SourceOperations { get; set; }
 
     public Func<HttpContext, bool> Filter { get; set; } = (_) => true;
 
@@ -20,7 +22,8 @@ public sealed class GlobalOptions
 
 public sealed record ImmutableGlobalOptions
 {
-    public string Source { get; init; } = string.Empty;
+    public string? Source { get; init; }
+    public ISourceOperations? SourceOperations { get; init; }
 
     public Func<HttpContext, bool> Filter { get; init; } = (_) => true;
 
