@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using System.Data;
 using Tracker.AspNet.Services.Contracts;
 
@@ -49,7 +50,6 @@ public sealed class NpgsqlDbOperations<TContext>(IServiceScopeFactory scopeFacto
             parameter.Value = table;
             parameter.DbType = DbType.String;
             command.Parameters.Add(parameter);
-
             var result = await command.ExecuteScalarAsync(token);
             var res = result?.ToString();
             return string.IsNullOrEmpty(res) ? null : DateTimeOffset.Parse(res);
