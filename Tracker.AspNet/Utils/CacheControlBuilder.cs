@@ -9,6 +9,12 @@ public sealed class CacheControlBuilder
     private byte _flags;
     private const byte NoCacheFlag = 1 << 0;
     private const byte NoStoreFlag = 1 << 1;
+    private const byte PrivateFlag = 1 << 2;
+    private const byte PublicFlag = 1 << 3;
+    private const byte MustRevalidateFlag = 1 << 4;
+    private const byte ProxyRevalidateFlag = 1 << 5;
+    private const byte NoTransformFlag = 1 << 6;
+    private const byte ImmutableFlag = 1 << 7;
 
     private int? _maxAge;
 
@@ -49,6 +55,24 @@ public sealed class CacheControlBuilder
 
         if ((_flags & NoStoreFlag) != 0)
             sb.Append("no-store");
+
+        if ((_flags & PrivateFlag) != 0)
+            sb.Append("private");
+
+        if ((_flags & PublicFlag) != 0)
+            sb.Append("public");
+
+        if ((_flags & MustRevalidateFlag) != 0)
+            sb.Append("must-revalidate");
+
+        if ((_flags & ProxyRevalidateFlag) != 0)
+            sb.Append("proxy-revalidate");
+
+        if ((_flags & NoTransformFlag) != 0)
+            sb.Append("no-transform");
+
+        if ((_flags & ImmutableFlag) != 0)
+            sb.Append("immutable");
     }
 
     private void AppendCustomDirectives(StringBuilder sb)
