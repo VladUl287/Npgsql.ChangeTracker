@@ -29,7 +29,7 @@ public sealed class TrackAttribute<TContext>(
             _actionOptions = baseOptions with
             {
                 CacheControl = _cacheControl ?? baseOptions.CacheControl,
-                Source = _sourceId ?? baseOptions.Source ?? typeof(TContext).GetTypeHashId(),
+                Source = _sourceId ?? typeof(TContext).GetTypeHashId(),
                 Tables = _tables
             };
             return _actionOptions;
