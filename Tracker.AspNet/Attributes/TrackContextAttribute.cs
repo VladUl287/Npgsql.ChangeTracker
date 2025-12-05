@@ -16,12 +16,19 @@ public sealed class TrackAttribute<TContext> : Attribute, IAsyncActionFilter
     private ImmutableGlobalOptions? _actionOptions;
     private readonly Lock _lock = new();
     private readonly ImmutableArray<string> _tables = [];
+    private readonly string? _sourceId = null;
+    private readonly string? _cacheControl = null;
 
     public TrackAttribute(params string[] tables)
     {
         ArgumentNullException.ThrowIfNull(tables, nameof(tables));
-
         _tables = [.. tables];
+    }
+
+    public TrackAttribute(string? sourceId = null, string? cacheControl = null, params string[] tables) : this(tables)
+    {
+        _sourceId = sourceId;
+        _cacheControl = cacheControl;
     }
 
     public async Task OnActionExecutionAsync(ActionExecutingContext execContext, ActionExecutionDelegate next)
@@ -63,10 +70,10 @@ public sealed class TrackAttribute<TContext> : Attribute, IAsyncActionFilter
                 return _actionOptions;
 
             var baseOptions = execContext.HttpContext.RequestServices.GetRequiredService<ImmutableGlobalOptions>();
-            var source = typeof(TContext).GetTypeHashId();
             _actionOptions = baseOptions with
             {
-                Source = source,
+                Source = _sourceId ?? baseOptions.Source ?? typeof(TContext).GetTypeHashId(),
+                CacheControl = _cacheControl ?? baseOptions.CacheControl,
                 Tables = _tables
             };
             return _actionOptions;

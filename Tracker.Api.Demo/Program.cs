@@ -14,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
         {
             conf.XactCacheLifeTime = TimeSpan.FromDays(1);
         })
+        .AddNpgsql<DatabaseContext>()
         .AddNpgsql("source1", "Host=localhost;Port=5432;Database=test123;Username=postgres;Password=postgres")
         .AddSqlServer("source2", "Server=localhost;Database=MyDb;Trusted_Connection=true;")
         .AddDbContext<DatabaseContext>(options =>
