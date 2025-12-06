@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc.Filters;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
+using System.Runtime.CompilerServices;
 using Tracker.AspNet.Models;
 using Tracker.AspNet.Services.Contracts;
 
@@ -12,28 +14,31 @@ public abstract class TrackAttributeBase : Attribute, IAsyncActionFilter
         var options = GetOrSetOptions(execContext);
 
         var httpCtx = execContext.HttpContext;
-        var reqServices = httpCtx.RequestServices;
 
-        var requestFilter = reqServices.GetRequiredService<IRequestFilter>();
-        var shouldProcessRequest = requestFilter.ShouldProcessRequest(httpCtx, options);
-        if (!shouldProcessRequest)
+        if (ShouldProcessRequestAsync(httpCtx, options))
         {
-            await next();
-            return;
+            var cancelToken = httpCtx.RequestAborted;
+            if (cancelToken.IsCancellationRequested)
+                return;
+
+            if (await ShouldReturnNotModifiedAsync(httpCtx, options, cancelToken))
+                return;
         }
 
-        var cancelToken = httpCtx.RequestAborted;
-        if (cancelToken.IsCancellationRequested)
-            return;
-
-        var etagService = reqServices.GetRequiredService<IETagService>();
-        var shouldReturnNotModified = await etagService.TrySetETagAsync(httpCtx, options, cancelToken);
-        if (!shouldReturnNotModified)
-        {
-            await next();
-            return;
-        }
+        await next();
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ShouldProcessRequestAsync(HttpContext httpCtx, ImmutableGlobalOptions options) =>
+        httpCtx.RequestServices
+            .GetRequiredService<IRequestFilter>()
+            .ShouldProcessRequest(httpCtx, options);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Task<bool> ShouldReturnNotModifiedAsync(HttpContext httpCtx, ImmutableGlobalOptions options, CancellationToken token) =>
+        httpCtx.RequestServices
+            .GetRequiredService<IETagService>()
+            .TrySetETagAsync(httpCtx, options, token);
 
     protected abstract ImmutableGlobalOptions GetOrSetOptions(ActionExecutingContext execContext);
 }
