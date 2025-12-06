@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Tracker.AspNet.Services.Contracts;
+using Tracker.Core.Services.Contracts;
 
 namespace Tracker.AspNet;
 

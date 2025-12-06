@@ -1,4 +1,6 @@
-﻿namespace Tracker.AspNet.Services.Contracts;
+﻿using Tracker.Core.Services.Contracts;
+
+namespace Tracker.AspNet.Services.Contracts;
 
 public interface ISourceOperationsResolver
 {

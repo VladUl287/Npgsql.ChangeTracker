@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Collections.Immutable;
-using Tracker.AspNet.Services.Contracts;
 using Tracker.AspNet.Utils;
+using Tracker.Core.Services.Contracts;
 
 namespace Tracker.AspNet.Models;
 
