@@ -4,31 +4,38 @@ using Tracker.Core.Services.Contracts;
 
 namespace Tracker.Npgsql.Services;
 
-public sealed class NpgsqlOperations : ISourceOperations
+public sealed class NpgsqlOperations : ISourceOperations, IDisposable
 {
-    private readonly string sourceId;
-    private readonly NpgsqlDataSource dataSource;
+    private readonly string _sourceId;
+    private readonly NpgsqlDataSource _dataSource;
+    private bool _disposed;
 
     public NpgsqlOperations(string sourceId, NpgsqlDataSource dataSource)
     {
-        this.sourceId = sourceId;
-        this.dataSource = dataSource;
+        ArgumentException.ThrowIfNullOrEmpty(sourceId, nameof(sourceId));
+        ArgumentNullException.ThrowIfNull(dataSource, nameof(dataSource));
+
+        _sourceId = sourceId;
+        _dataSource = dataSource;
     }
 
     public NpgsqlOperations(string sourceId, string connectionString)
     {
-        this.sourceId = sourceId;
-        dataSource = new NpgsqlDataSourceBuilder(connectionString).Build();
+        ArgumentException.ThrowIfNullOrEmpty(sourceId, nameof(sourceId));
+        ArgumentException.ThrowIfNullOrEmpty(connectionString, nameof(connectionString));
+
+        _sourceId = sourceId;
+        _dataSource = new NpgsqlDataSourceBuilder(connectionString).Build();
     }
 
-    public string SourceId => sourceId;
+    public string SourceId => _sourceId;
 
     public async Task<DateTimeOffset?> GetLastTimestamp(string key, CancellationToken token)
     {
         ArgumentException.ThrowIfNullOrEmpty(key, nameof(key));
 
         const string getTimestampQuery = "SELECT get_last_timestamp(@table_name);";
-        await using var command = dataSource.CreateCommand(getTimestampQuery);
+        await using var command = _dataSource.CreateCommand(getTimestampQuery);
 
         const string tableNameParam = "table_name";
         command.Parameters.AddWithValue(tableNameParam, key);
@@ -49,5 +56,27 @@ public sealed class NpgsqlOperations : ISourceOperations
     public Task<DateTimeOffset?> GetLastTimestamp(CancellationToken token)
     {
         throw new NotImplementedException();
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (_disposed)
+            return;
+
+        if (disposing)
+            _dataSource?.Dispose();
+
+        _disposed = true;
+    }
+
+    ~NpgsqlOperations()
+    {
+        Dispose(disposing: false);
     }
 }
