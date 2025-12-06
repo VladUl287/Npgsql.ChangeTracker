@@ -14,31 +14,23 @@ public abstract class TrackAttributeBase : Attribute, IAsyncActionFilter
         var options = GetOrSetOptions(execContext);
 
         var httpCtx = execContext.HttpContext;
-
-        if (ShouldProcessRequestAsync(httpCtx, options))
-        {
-            var cancelToken = httpCtx.RequestAborted;
-            if (cancelToken.IsCancellationRequested)
-                return;
-
-            if (await ShouldReturnNotModifiedAsync(httpCtx, options, cancelToken))
-                return;
-        }
+        if (RequestValid(httpCtx, options) && await NotModified(httpCtx, options))
+            return;
 
         await next();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ShouldProcessRequestAsync(HttpContext httpCtx, ImmutableGlobalOptions options) =>
+    private static bool RequestValid(HttpContext httpCtx, ImmutableGlobalOptions options) =>
         httpCtx.RequestServices
             .GetRequiredService<IRequestFilter>()
             .ShouldProcessRequest(httpCtx, options);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Task<bool> ShouldReturnNotModifiedAsync(HttpContext httpCtx, ImmutableGlobalOptions options, CancellationToken token) =>
+    private static Task<bool> NotModified(HttpContext httpCtx, ImmutableGlobalOptions options) =>
         httpCtx.RequestServices
             .GetRequiredService<IETagService>()
-            .TrySetETagAsync(httpCtx, options, token);
+            .TrySetETagAsync(httpCtx, options, httpCtx.RequestAborted);
 
     protected abstract ImmutableGlobalOptions GetOrSetOptions(ActionExecutingContext execContext);
 }
