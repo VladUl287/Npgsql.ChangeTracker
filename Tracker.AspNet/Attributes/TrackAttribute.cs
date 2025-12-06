@@ -14,7 +14,7 @@ public sealed class TrackAttribute(
     private ImmutableGlobalOptions? _actionOptions;
     private readonly Lock _lock = new();
 
-    protected override ImmutableGlobalOptions GetOptions(ActionExecutingContext execContext)
+    protected override ImmutableGlobalOptions GetOptions(ActionExecutingContext execCtx)
     {
         if (_actionOptions is not null)
             return _actionOptions;
@@ -24,14 +24,13 @@ public sealed class TrackAttribute(
             if (_actionOptions is not null)
                 return _actionOptions;
 
-            var baseOptions = execContext.HttpContext.RequestServices.GetRequiredService<ImmutableGlobalOptions>();
-            _actionOptions = baseOptions with
+            var options = execCtx.HttpContext.RequestServices.GetRequiredService<ImmutableGlobalOptions>();
+            return _actionOptions = options with
             {
-                CacheControl = cacheControl ?? baseOptions.CacheControl,
-                Source = sourceId ?? baseOptions.Source,
+                CacheControl = cacheControl ?? options.CacheControl,
+                Source = sourceId ?? options.Source,
                 Tables = tables?.ToImmutableArray() ?? []
             };
-            return _actionOptions;
         }
     }
 }
