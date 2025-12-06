@@ -21,8 +21,6 @@ public sealed class GlobalOptionsBuilder(IServiceScopeFactory scopeFactory) : IO
             CacheControl = cacheControl,
             Tables = [.. options.Tables],
             SourceOperations = options.SourceOperations,
-            XactCacheLifeTime = options.XactCacheLifeTime,
-            TablesCacheLifeTime = options.TablesCacheLifeTime,
             SourceOperationsFactory = options.SourceOperationsFactory,
         };
     }
@@ -49,8 +47,6 @@ public sealed class GlobalOptionsBuilder(IServiceScopeFactory scopeFactory) : IO
             Suffix = options.Suffix,
             CacheControl = cacheControl,
             SourceOperations = options.SourceOperations,
-            XactCacheLifeTime = options.XactCacheLifeTime,
-            TablesCacheLifeTime = options.TablesCacheLifeTime,
             SourceOperationsFactory = options.SourceOperationsFactory,
         };
     }

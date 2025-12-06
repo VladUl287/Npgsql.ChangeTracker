@@ -14,12 +14,11 @@ public class ETagService(
         ArgumentNullException.ThrowIfNull(context, nameof(context));
         ArgumentNullException.ThrowIfNull(options, nameof(options));
 
-        var sourceOperations = options.SourceOperations ?? 
-            options.SourceOperationsFactory?.Invoke(context) ?? 
+        var sourceOperations = options.SourceOperations ??
+            options.SourceOperationsFactory?.Invoke(context) ??
             operationsResolver.Resolve(options.Source);
 
-        var suffix = options.Suffix(context);
-        var etag = await GetETag(suffix, options, sourceOperations, token);
+        var etag = await GetETag(context, options, sourceOperations, token);
         if (etag is null)
         {
             logger.LogLastTimestampNotFound();
@@ -39,8 +38,9 @@ public class ETagService(
         return false;
     }
 
-    private async Task<string?> GetETag(string suffix, ImmutableGlobalOptions options, ISourceOperations dbOpeartions, CancellationToken token)
+    private async Task<string?> GetETag(HttpContext ctx, ImmutableGlobalOptions options, ISourceOperations dbOpeartions, CancellationToken token)
     {
+        var suffix = options.Suffix(ctx);
         if (options is { Tables.Length: 0 })
         {
             var xact = await dbOpeartions.GetLastTimestamp(token);
