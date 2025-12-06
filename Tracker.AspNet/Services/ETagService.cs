@@ -27,14 +27,16 @@ public class ETagService(
 
         if (context.Request.Headers.IfNoneMatch == etag)
         {
-            logger.LogNotModified(etag);
             context.Response.StatusCode = StatusCodes.Status304NotModified;
+
+            logger.LogNotModified(etag);
             return true;
         }
 
-        logger.LogETagAdded(etag);
-        context.Response.Headers.ETag = etag;
         context.Response.Headers.CacheControl = options.CacheControl;
+        context.Response.Headers.ETag = etag;
+
+        logger.LogETagAdded(etag);
         return false;
     }
 
@@ -45,10 +47,8 @@ public class ETagService(
         {
             var xact = await dbOpeartions.GetLastTimestamp(token);
             if (xact is null)
-            {
-                logger.LogLastTimestampNotFound();
                 return null;
-            }
+
             return etagGenerator.GenerateETag(xact.Value, suffix);
         }
 
@@ -57,10 +57,8 @@ public class ETagService(
         {
             var lastTimestamp = await dbOpeartions.GetLastTimestamp(table, token);
             if (lastTimestamp is null)
-            {
-                logger.LogLastTimestampNotFound();
                 return null;
-            }
+
             timestamps.Add(lastTimestamp.Value);
         }
 
