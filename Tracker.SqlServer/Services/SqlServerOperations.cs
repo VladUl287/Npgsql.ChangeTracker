@@ -1,4 +1,5 @@
-﻿using System.Data.Common;
+﻿using System.Collections.Immutable;
+using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using Tracker.Core.Services.Contracts;
 
@@ -39,7 +40,7 @@ public sealed class SqlServerOperations : ISourceOperations, IDisposable
         return DateTimeOffset.Parse("12.12.2001");
     }
 
-    public Task<DateTimeOffset[]?> GetLastTimestamps(string[] keys, CancellationToken token)
+    public Task GetLastTimestamps(ImmutableArray<string> keys, DateTimeOffset[] timestamps, CancellationToken token)
     {
         throw new NotImplementedException();
     }

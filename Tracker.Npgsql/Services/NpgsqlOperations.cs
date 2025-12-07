@@ -1,4 +1,5 @@
 ﻿using Npgsql;
+using System.Collections.Immutable;
 using System.Data;
 using Tracker.Core.Services.Contracts;
 
@@ -48,19 +49,16 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
         return null;
     }
 
-    public async Task<DateTimeOffset[]?> GetLastTimestamps(string[] keys, CancellationToken token)
+    public async Task GetLastTimestamps(ImmutableArray<string> keys, DateTimeOffset[] timestamps, CancellationToken token)
     {
-        var timestamps = new List<DateTimeOffset>();
-        foreach (var key in keys)
-        {
-            var timestamp = await GetLastTimestamp(key, token);
-            
-            if (timestamp is null)
-                return null;
+        if (keys.Length > timestamps.Length)
+            throw new ArgumentException("");
 
-            timestamps.Add(timestamp.Value);
+        for (int i = 0; i < keys.Length; i++)
+        {
+            timestamps[i] = await GetLastTimestamp(keys[i], token) ??
+                throw new NullReferenceException("");
         }
-        return [.. timestamps];
     }
 
     public Task<DateTimeOffset?> GetLastTimestamp(CancellationToken token)
