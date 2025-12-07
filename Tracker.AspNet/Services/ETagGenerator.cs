@@ -29,13 +29,4 @@ public class ETagGenerator(Assembly executionAssembly) : IETagGenerator
             etag += $"-{suffix}";
         return etag;
     }
-
-    public string GenerateETag(uint xact, string suffix)
-    {
-        var x16 = xact.ToString("x16");
-        var etag = $"{AssemblyBuildTime.Ticks}-{x16}";
-        if (!string.IsNullOrEmpty(suffix))
-            etag += $"-{suffix}";
-        return etag;
-    }
 }
