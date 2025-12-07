@@ -47,8 +47,6 @@ public class ETagService(
         if (options is { Tables.Length: 0 })
         {
             var timestamp = await sourceOperations.GetLastTimestamp(token);
-            if (timestamp is null) 
-                return null;
             return etagGenerator.GenerateETag(timestamp.Value, suffix);
         }
 
