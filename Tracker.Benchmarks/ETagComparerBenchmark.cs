@@ -106,7 +106,7 @@ public unsafe class ETagComparerBenchmark
         long result = 0;
         foreach (var c in str)
         {
-            //if (c < '0' || c > '9') return false;
+            if (c < '0' || c > '9') return false;
             result = result * 10 + (c - '0');
         }
 

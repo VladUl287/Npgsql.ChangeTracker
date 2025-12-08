@@ -6,11 +6,14 @@ namespace Tracker.AspNet.Services;
 
 public class ETagGenerator(Assembly executionAssembly) : IETagGenerator
 {
-    private readonly DateTimeOffset AssemblyBuildTime = executionAssembly.GetAssemblyWriteTime();
+    private readonly DateTimeOffset _assemblyBuildTime = executionAssembly.GetAssemblyWriteTime();
+    private readonly string _assemblyBuildTimeTicks = executionAssembly.GetAssemblyWriteTime().Ticks.ToString();
+
+    public string AssemblyBuildTimeTicks => _assemblyBuildTimeTicks;
 
     public string GenerateETag(DateTimeOffset timestamp, string suffix)
     {
-        var etag = $"{AssemblyBuildTime.Ticks}-{timestamp.Ticks}";
+        var etag = $"{_assemblyBuildTime.Ticks}-{timestamp.Ticks}";
         if (!string.IsNullOrEmpty(suffix))
             etag += $"-{suffix}";
         return etag;
@@ -24,7 +27,7 @@ public class ETagGenerator(Assembly executionAssembly) : IETagGenerator
             xorResult ^= timestamp.UtcTicks;
 
         var x16 = xorResult.ToString("x16");
-        var etag = $"{AssemblyBuildTime.Ticks}-{x16}";
+        var etag = $"{_assemblyBuildTime.Ticks}-{x16}";
         if (!string.IsNullOrEmpty(suffix))
             etag += $"-{suffix}";
         return etag;
