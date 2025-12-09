@@ -31,7 +31,7 @@ public sealed class SqlServerOperations : ISourceOperations, IDisposable
 
     public string SourceId => _sourceId;
 
-    public async Task<DateTimeOffset?> GetLastTimestamp(string key, CancellationToken token)
+    public async Task<DateTimeOffset> GetLastTimestamp(string key, CancellationToken token)
     {
         ArgumentException.ThrowIfNullOrEmpty(key, nameof(key));
 
@@ -40,12 +40,12 @@ public sealed class SqlServerOperations : ISourceOperations, IDisposable
         return DateTimeOffset.Parse("12.12.2001");
     }
 
-    public Task GetLastTimestamps(ImmutableArray<string> keys, DateTimeOffset[] timestamps, CancellationToken token)
+    public Task GetLastTimestamps(ImmutableArray<string> keys, Span<DateTimeOffset> timestamps, CancellationToken token)
     {
         throw new NotImplementedException();
     }
 
-    public Task<DateTimeOffset?> GetLastTimestamp(CancellationToken token)
+    public Task<DateTimeOffset> GetLastTimestamp(CancellationToken token)
     {
         throw new NotImplementedException();
     }

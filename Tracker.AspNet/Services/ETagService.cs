@@ -12,83 +12,73 @@ namespace Tracker.AspNet.Services;
 public class ETagService(
     IETagGenerator etagGenerator, ISourceOperationsResolver operationsResolver, ILogger<ETagService> logger) : IETagService
 {
-    public async Task<bool> TrySetETagAsync(HttpContext context, ImmutableGlobalOptions options, CancellationToken token)
+    public async Task<bool> TrySetETagAsync(HttpContext ctx, ImmutableGlobalOptions options, CancellationToken token)
     {
-        ArgumentNullException.ThrowIfNull(context, nameof(context));
+        ArgumentNullException.ThrowIfNull(ctx, nameof(ctx));
         ArgumentNullException.ThrowIfNull(options, nameof(options));
 
-        var etag = await GenerateETag(context, options, token);
-        if (etag is null)
+        var sourceOperations = GetOperationsProvider(ctx, options, operationsResolver);
+
+        var ltValue = 0L;
+        if (options is { Tables.Length: 0 })
         {
-            logger.LogLastTimestampNotFound();
-            return false;
+            var tm = await sourceOperations.GetLastTimestamp(token);
+            ltValue = tm.Ticks;
+        }
+        else
+        {
+            var timestamps = ArrayPool<DateTimeOffset>.Shared.Rent(options.Tables.Length);
+            await sourceOperations.GetLastTimestamps(options.Tables, timestamps, token);
+
+            foreach (var tmsmp in timestamps)
+                ltValue ^= tmsmp.Ticks;
+
+            ArrayPool<DateTimeOffset>.Shared.Return(timestamps);
         }
 
-        if (context.Request.Headers.IfNoneMatch == etag)
-        {
-            context.Response.StatusCode = StatusCodes.Status304NotModified;
+        var incomingETag = ctx.Request.Headers.IfNoneMatch.Count > 0 ? ctx.Request.Headers.IfNoneMatch[0] : null;
 
-            logger.LogNotModified(etag);
+        var asBuildTime = etagGenerator.AssemblyBuildTimeTicks;
+        var ltDigitCount = DigitCountLog(ltValue);
+        var suffix = options.Suffix(ctx);
+        var fullLength = asBuildTime.Length + 2 + ltDigitCount + suffix.Length;
+
+        if (incomingETag is not null && ETagEqual(incomingETag, ltValue, asBuildTime, suffix))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status304NotModified;
+            logger.LogNotModified(incomingETag);
             return true;
         }
 
-        context.Response.Headers.CacheControl = options.CacheControl;
-        context.Response.Headers.ETag = etag;
-
+        ctx.Response.Headers.CacheControl = options.CacheControl;
+        var etag = BuildETag(fullLength, (asBuildTime, ltValue, suffix));
+        ctx.Response.Headers.ETag = etag;
         logger.LogETagAdded(etag);
         return false;
     }
 
-    private async Task<bool> GenerateETagAndCompare(HttpContext ctx, ImmutableGlobalOptions options, CancellationToken token)
+    private static bool ETagEqual(string inETag, long lTimestamp, string asBuildTime, string suffix)
     {
-        var sourceOperations = ResolveOperationsProvider(ctx, options, operationsResolver);
-
-        var lastTimestamp = await sourceOperations.GetLastTimestamp(options.Tables[0], token);
-        if (lastTimestamp is null)
-            return false;
-
-        var ltValue = lastTimestamp.Value.Ticks;
-        var ltDigitCount = DigitCountLog(ltValue);
-
-        var asBuildTime = etagGenerator.AssemblyBuildTimeTicks;
-        var suffix = options.Suffix(ctx);
-
-        var incomingETag = ctx.Request.Headers.IfNoneMatch[0].AsSpan();
+        var ltDigitCount = DigitCountLog(lTimestamp);
 
         var fullLength = asBuildTime.Length + 2 + ltDigitCount + suffix.Length;
-        if (fullLength != incomingETag.Length)
-        {
-            ctx.Response.Headers.CacheControl = options.CacheControl;
-            ctx.Response.Headers.ETag = BuildETag(fullLength, (asBuildTime, ltValue, suffix));
+        if (fullLength != inETag.Length)
             return false;
-        }
 
+        var incomingETag = inETag.AsSpan();
         var rightEdge = asBuildTime.Length;
         var inAsBuildTime = incomingETag[..rightEdge];
         if (!inAsBuildTime.Equals(asBuildTime.AsSpan(), StringComparison.Ordinal))
-        {
-            ctx.Response.Headers.CacheControl = options.CacheControl;
-            ctx.Response.Headers.ETag = BuildETag(fullLength, (asBuildTime, ltValue, suffix));
             return false;
-        }
 
         var inTicks = incomingETag.Slice(++rightEdge, ltDigitCount);
-        if (!CompareStringWithLong(inTicks, ltValue))
-        {
-            ctx.Response.Headers.CacheControl = options.CacheControl;
-            ctx.Response.Headers.ETag = BuildETag(fullLength, (asBuildTime, ltValue, suffix));
+        if (!CompareStringWithLong(inTicks, lTimestamp))
             return false;
-        }
 
         var inSuffix = incomingETag[rightEdge..];
         if (!inSuffix.Equals(suffix, StringComparison.Ordinal))
-        {
-            ctx.Response.Headers.CacheControl = options.CacheControl;
-            ctx.Response.Headers.ETag = BuildETag(fullLength, (asBuildTime, ltValue, suffix));
             return false;
-        }
 
-        ctx.Response.StatusCode = StatusCodes.Status304NotModified;
         return true;
     }
 
@@ -130,26 +120,8 @@ public class ETagService(
         return (int)Math.Floor(Math.Log10(n)) + 1;
     }
 
-    private async Task<string?> GenerateETag(HttpContext ctx, ImmutableGlobalOptions options, CancellationToken token)
-    {
-        var sourceOperations = ResolveOperationsProvider(ctx, options, operationsResolver);
-
-        var suffix = options.Suffix(ctx);
-        if (options is { Tables.Length: 0 })
-        {
-            var timestamp = await sourceOperations.GetLastTimestamp(token);
-            return etagGenerator.GenerateETag(timestamp.Value, suffix);
-        }
-
-        var timestamps = ArrayPool<DateTimeOffset>.Shared.Rent(options.Tables.Length);
-        await sourceOperations.GetLastTimestamps(options.Tables, timestamps, token);
-        var etag = etagGenerator.GenerateETag(timestamps, suffix);
-        ArrayPool<DateTimeOffset>.Shared.Return(timestamps);
-        return etag;
-    }
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ISourceOperations ResolveOperationsProvider(
-        HttpContext ctx, ImmutableGlobalOptions opt, ISourceOperationsResolver srcResolver) =>
-        opt.SourceOperations ?? opt.SourceOperationsFactory?.Invoke(ctx) ?? srcResolver.Resolve(opt.Source);
+    private static ISourceOperations GetOperationsProvider(
+        HttpContext ctx, ImmutableGlobalOptions opt, ISourceOperationsResolver resolver) =>
+        opt.SourceOperations ?? opt.SourceOperationsFactory?.Invoke(ctx) ?? resolver.Resolve(opt.Source);
 }

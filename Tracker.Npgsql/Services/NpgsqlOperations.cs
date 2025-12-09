@@ -31,7 +31,7 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
 
     public string SourceId => _sourceId;
 
-    public async Task<DateTimeOffset?> GetLastTimestamp(string key, CancellationToken token)
+    public async Task<DateTimeOffset> GetLastTimestamp(string key, CancellationToken token)
     {
         ArgumentException.ThrowIfNullOrEmpty(key, nameof(key));
 
@@ -44,9 +44,9 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
         using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
 
         if (await reader.ReadAsync(token))
-            return await reader.GetFieldValueAsync<DateTimeOffset?>(0, token);
+            return await reader.GetFieldValueAsync<DateTimeOffset?>(0, token) ?? throw new NullReferenceException();
 
-        return null;
+        throw new InvalidOperationException();
     }
 
     public async Task GetLastTimestamps(ImmutableArray<string> keys, DateTimeOffset[] timestamps, CancellationToken token)
@@ -56,12 +56,11 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
 
         for (int i = 0; i < keys.Length; i++)
         {
-            timestamps[i] = await GetLastTimestamp(keys[i], token) ??
-                throw new NullReferenceException("");
+            timestamps[i] = await GetLastTimestamp(keys[i], token);
         }
     }
 
-    public Task<DateTimeOffset?> GetLastTimestamp(CancellationToken token)
+    public Task<DateTimeOffset> GetLastTimestamp(CancellationToken token)
     {
         throw new NotImplementedException();
     }
