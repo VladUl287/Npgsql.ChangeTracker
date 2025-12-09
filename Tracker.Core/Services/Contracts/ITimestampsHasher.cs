@@ -2,5 +2,5 @@
 
 public interface ITimestampsHasher
 {
-    long Hash(Span<DateTimeOffset> timestamps);
+    ulong Hash(Span<DateTimeOffset> timestamps);
 }

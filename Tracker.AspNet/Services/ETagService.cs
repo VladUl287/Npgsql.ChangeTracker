@@ -20,16 +20,16 @@ public class ETagService(
 
         var sourceOperations = GetOperationsProvider(ctx, options, operationsResolver);
 
-        long ltValue;
+        ulong ltValue;
         if (options is { Tables.Length: 0 })
         {
             var tm = await sourceOperations.GetLastTimestamp(token);
-            ltValue = tm.Ticks;
+            ltValue = (ulong)tm.Ticks;
         }
         else if (options is { Tables.Length: 1 })
         {
             var tm = await sourceOperations.GetLastTimestamp(options.Tables[0], token);
-            ltValue = tm.Ticks;
+            ltValue = (ulong)tm.Ticks;
         }
         else
         {
@@ -60,7 +60,7 @@ public class ETagService(
         return false;
     }
 
-    private static bool ETagEqual(string inETag, long lTimestamp, string asBuildTime, string suffix)
+    private static bool ETagEqual(string inETag, ulong lTimestamp, string asBuildTime, string suffix)
     {
         var ltDigitCount = DigitCountLog(lTimestamp);
 
@@ -90,23 +90,23 @@ public class ETagService(
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool CompareStringWithLong(ReadOnlySpan<char> str, long number)
+    private static bool CompareStringWithLong(ReadOnlySpan<char> str, ulong number)
     {
         if (str.Length > 19)
             return false;
 
-        long result = 0;
+        ulong result = 0;
         foreach (var c in str)
         {
             if (c < '0' || c > '9') return false;
-            result = result * 10 + (c - '0');
+            result = result * 10 + (ulong)(c - '0');
         }
 
         return result == number;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string BuildETag(int fullLength, (string AsBuldTime, long LastTimestamp, string Suffix) state) =>
+    private static string BuildETag(int fullLength, (string AsBuldTime, ulong LastTimestamp, string Suffix) state) =>
         string.Create(fullLength, state, (chars, state) =>
         {
             var position = state.AsBuldTime.Length;
@@ -124,7 +124,7 @@ public class ETagService(
         });
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int DigitCountLog(long n)
+    private static int DigitCountLog(ulong n)
     {
         if (n == 0) return 1;
         return (int)Math.Floor(Math.Log10(n)) + 1;

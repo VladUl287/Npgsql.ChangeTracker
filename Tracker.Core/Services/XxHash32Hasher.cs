@@ -5,11 +5,13 @@ namespace Tracker.Core.Services;
 
 public sealed class XxHash32Hasher : ITimestampsHasher
 {
-    public long Hash(Span<DateTimeOffset> timestamps)
+    public ulong Hash(Span<DateTimeOffset> timestamps)
     {
         var hash = new XxHash32();
+
         foreach (var tmsmp in timestamps)
             hash.Append(BitConverter.GetBytes(tmsmp.Ticks));
+
         return hash.GetCurrentHashAsUInt32();
     }
 }
