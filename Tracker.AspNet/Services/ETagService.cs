@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
+using System.IO.Hashing;
 using System.Runtime.CompilerServices;
 using Tracker.AspNet.Logging;
 using Tracker.AspNet.Models;
@@ -30,8 +31,10 @@ public class ETagService(
             var timestamps = ArrayPool<DateTimeOffset>.Shared.Rent(options.Tables.Length);
             await sourceOperations.GetLastTimestamps(options.Tables, timestamps, token);
 
+            var hash = new XxHash32();
             foreach (var tmsmp in timestamps)
-                ltValue ^= tmsmp.Ticks;
+                hash.Append(BitConverter.GetBytes(tmsmp.Ticks));
+            ltValue = hash.GetCurrentHashAsUInt32();
 
             ArrayPool<DateTimeOffset>.Shared.Return(timestamps);
         }
