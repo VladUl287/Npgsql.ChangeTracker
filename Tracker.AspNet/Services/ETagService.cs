@@ -35,7 +35,7 @@ public class ETagService(
         {
             var timestamps = ArrayPool<DateTimeOffset>.Shared.Rent(options.Tables.Length);
             await sourceOperations.GetLastTimestamps(options.Tables, timestamps, token);
-            ltValue = timestampsHasher.Hash(timestamps);
+            ltValue = timestampsHasher.Hash(timestamps.AsSpan(0, options.Tables.Length));
             ArrayPool<DateTimeOffset>.Shared.Return(timestamps);
         }
 
