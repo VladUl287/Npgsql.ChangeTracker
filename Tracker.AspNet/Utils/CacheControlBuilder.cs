@@ -6,7 +6,7 @@ public sealed class CacheControlBuilder
 
     public CacheControlBuilder WithDirective(string directive)
     {
-        _directives.Add(directive.Trim().ToLowerInvariant());
+        _directives.Add(directive);
         return this;
     }
 
