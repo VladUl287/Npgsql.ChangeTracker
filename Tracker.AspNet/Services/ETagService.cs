@@ -13,7 +13,7 @@ public class ETagService(
     IETagGenerator etagGenerator, ISourceOperationsResolver operationsResolver, ITimestampsHasher timestampsHasher,
     ILogger<ETagService> logger) : IETagService
 {
-    public async Task<bool> TrySetETagAsync(HttpContext ctx, ImmutableGlobalOptions options, CancellationToken token)
+    public async Task<bool> NotModified(HttpContext ctx, ImmutableGlobalOptions options, CancellationToken token)
     {
         ArgumentNullException.ThrowIfNull(ctx, nameof(ctx));
         ArgumentNullException.ThrowIfNull(options, nameof(options));

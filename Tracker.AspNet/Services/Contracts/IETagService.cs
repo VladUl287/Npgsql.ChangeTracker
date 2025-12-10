@@ -5,5 +5,5 @@ namespace Tracker.AspNet.Services.Contracts;
 
 public interface IETagService
 {
-    Task<bool> TrySetETagAsync(HttpContext context, ImmutableGlobalOptions options, CancellationToken token);
+    Task<bool> NotModified(HttpContext context, ImmutableGlobalOptions options, CancellationToken token);
 }

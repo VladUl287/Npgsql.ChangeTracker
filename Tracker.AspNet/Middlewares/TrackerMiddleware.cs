@@ -5,27 +5,14 @@ using Tracker.AspNet.Services.Contracts;
 namespace Tracker.AspNet.Middlewares;
 
 public sealed class TrackerMiddleware(
-    RequestDelegate next, IRequestFilter requestFilter, IETagService eTagService,
+    RequestDelegate next, IRequestFilter filter, IETagService service,
     ImmutableGlobalOptions opts)
 {
     public async Task InvokeAsync(HttpContext ctx)
     {
-        var shouldProcessRequest = requestFilter.ShouldProcessRequest(ctx, opts);
-        if (!shouldProcessRequest)
-        {
-            await next(ctx);
-            return;
-        }
-
-        var token = ctx.RequestAborted;
-        if (token.IsCancellationRequested)
+        if (filter.RequestValid(ctx, opts) && await service.NotModified(ctx, opts, ctx.RequestAborted))
             return;
 
-        var shouldReturnNotModified = await eTagService.TrySetETagAsync(ctx, opts, token);
-        if (!shouldReturnNotModified)
-        {
-            await next(ctx);
-            return;
-        }
+        await next(ctx);
     }
 }

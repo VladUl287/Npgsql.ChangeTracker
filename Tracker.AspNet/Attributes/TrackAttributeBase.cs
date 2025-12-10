@@ -9,12 +9,11 @@ namespace Tracker.AspNet.Attributes;
 
 public abstract class TrackAttributeBase : Attribute, IAsyncActionFilter
 {
-    public async Task OnActionExecutionAsync(ActionExecutingContext execContext, ActionExecutionDelegate next)
+    public async Task OnActionExecutionAsync(ActionExecutingContext execCtx, ActionExecutionDelegate next)
     {
-        var options = GetOptions(execContext);
+        var options = GetOptions(execCtx);
 
-        var httpCtx = execContext.HttpContext;
-        if (RequestValid(httpCtx, options) && await NotModified(httpCtx, options))
+        if (RequestValid(execCtx.HttpContext, options) && await NotModified(execCtx.HttpContext, options))
             return;
 
         await next();
@@ -24,13 +23,13 @@ public abstract class TrackAttributeBase : Attribute, IAsyncActionFilter
     private static bool RequestValid(HttpContext httpCtx, ImmutableGlobalOptions options) =>
         httpCtx.RequestServices
             .GetRequiredService<IRequestFilter>()
-            .ShouldProcessRequest(httpCtx, options);
+            .RequestValid(httpCtx, options);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static Task<bool> NotModified(HttpContext httpCtx, ImmutableGlobalOptions options) =>
         httpCtx.RequestServices
             .GetRequiredService<IETagService>()
-            .TrySetETagAsync(httpCtx, options, httpCtx.RequestAborted);
+            .NotModified(httpCtx, options, httpCtx.RequestAborted);
 
     protected abstract ImmutableGlobalOptions GetOptions(ActionExecutingContext execContext);
 }

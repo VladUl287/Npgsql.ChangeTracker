@@ -5,5 +5,5 @@ namespace Tracker.AspNet.Services.Contracts;
 
 public interface IRequestFilter
 {
-    bool ShouldProcessRequest(HttpContext context, ImmutableGlobalOptions options);
+    bool RequestValid(HttpContext context, ImmutableGlobalOptions options);
 }

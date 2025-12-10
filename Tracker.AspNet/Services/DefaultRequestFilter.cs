@@ -10,7 +10,7 @@ namespace Tracker.AspNet.Services;
 
 public sealed class DefaultRequestFilter(ILogger<DefaultRequestFilter> logger) : IRequestFilter
 {
-    public bool ShouldProcessRequest(HttpContext context, ImmutableGlobalOptions options)
+    public bool RequestValid(HttpContext context, ImmutableGlobalOptions options)
     {
         if (!HttpMethods.IsGet(context.Request.Method))
         {
