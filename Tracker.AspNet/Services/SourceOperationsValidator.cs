@@ -16,7 +16,7 @@ public sealed class SourceOperationsValidator(IEnumerable<ISourceOperations> ope
     {
         if (!operations.Any())
             throw new InvalidOperationException(
-                "At least one ISourceOperations implementation is required");
+                $"At least one {nameof(ISourceOperations)} implementation is required");
 
         var duplicates = operations
             .GroupBy(o => o.SourceId)
@@ -26,6 +26,6 @@ public sealed class SourceOperationsValidator(IEnumerable<ISourceOperations> ope
 
         if (duplicates.Count != 0)
             throw new InvalidOperationException(
-                $"Duplicate SourceId values found: {string.Join(", ", duplicates)}");
+                $"Duplicate {nameof(ISourceOperations.SourceId)} values found: {string.Join(", ", duplicates)}");
     }
 }
