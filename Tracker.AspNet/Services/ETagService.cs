@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Runtime.CompilerServices;
 using Tracker.AspNet.Services.Contracts;
 using Tracker.Core.Extensions;
 
@@ -6,20 +7,25 @@ namespace Tracker.AspNet.Services;
 
 public class ETagService(Assembly executionAssembly) : IETagService
 {
-    private readonly string _assemblyBuildTimeTicks = executionAssembly.GetAssemblyWriteTime().Ticks.ToString();
+    private readonly string _assemblyBuildTime = executionAssembly.GetAssemblyWriteTime().Ticks.ToString();
 
-    public string AssemblyBuildTimeTicks => _assemblyBuildTimeTicks;
+    public string AssemblyBuildTimeTicks => _assemblyBuildTime;
 
-    public bool EqualsTo(string ifNoneMatch, int fullLength, ulong lastTimestamp, string suffix)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int ComputeLength(ulong lastTimestamp, string suffix) =>
+        _assemblyBuildTime.Length + lastTimestamp.CountDigits() + suffix.Length + (suffix.Length > 0 ? 2 : 1);
+
+    public bool EqualsTo(string ifNoneMatch, ulong lastTimestamp, string suffix)
     {
+        var fullLength = ComputeLength(lastTimestamp, suffix);
         if (fullLength != ifNoneMatch.Length)
             return false;
 
         var ltDigitCount = lastTimestamp.CountDigits();
         var incomingETag = ifNoneMatch.AsSpan();
-        var rightEdge = _assemblyBuildTimeTicks.Length;
+        var rightEdge = _assemblyBuildTime.Length;
         var inAsBuildTime = incomingETag[..rightEdge];
-        if (!inAsBuildTime.Equals(_assemblyBuildTimeTicks.AsSpan(), StringComparison.Ordinal))
+        if (!inAsBuildTime.Equals(_assemblyBuildTime.AsSpan(), StringComparison.Ordinal))
             return false;
 
         var inTicks = incomingETag.Slice(++rightEdge, ltDigitCount);
@@ -37,9 +43,10 @@ public class ETagService(Assembly executionAssembly) : IETagService
         return true;
     }
 
-    public string Build(int fullLength, ulong lastTimestamp, string suffix)
+    public string Build(ulong lastTimestamp, string suffix)
     {
-        return string.Create(fullLength, (_assemblyBuildTimeTicks, lastTimestamp, suffix), (chars, state) =>
+        var fullLength = ComputeLength(lastTimestamp, suffix);
+        return string.Create(fullLength, (_assemblyBuildTime, lastTimestamp, suffix), (chars, state) =>
         {
             var (asBuildTime, lastTimestamp, suffix) = state;
 

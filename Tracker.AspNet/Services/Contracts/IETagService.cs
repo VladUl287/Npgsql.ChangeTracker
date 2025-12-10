@@ -3,6 +3,7 @@
 public interface IETagService
 {
     string AssemblyBuildTimeTicks { get; }
-    bool EqualsTo(string ifNoneMatch, int fullLength, ulong lastTimestamp, string suffix);
-    string Build(int fullLength, ulong lastTimestamp, string suffix);
+    int ComputeLength(ulong lastTimestamp, string suffix);
+    bool EqualsTo(string ifNoneMatch, ulong lastTimestamp, string suffix);
+    string Build(ulong lastTimestamp, string suffix);
 }

@@ -19,12 +19,6 @@ public static partial class TrackMiddlewareLogger
     [LoggerMessage(Level = LogLevel.Warning, Message = "Invalid timestamp format: {Timestamp}")]
     public static partial void LogInvalidTimestampFormat(this ILogger logger, string timestamp);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Resource not modified. ETag: {ETag}")]
-    public static partial void LogNotModified(this ILogger logger, string etag);
-
-    [LoggerMessage(Level = LogLevel.Debug, Message = "ETag added to response: {ETag}")]
-    public static partial void LogETagAdded(this ILogger logger, string etag);
-
     [LoggerMessage(Level = LogLevel.Information, Message = "Request was cancelled")]
     public static partial void LogOperationCancelled(this ILogger logger);
 
