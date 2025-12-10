@@ -11,26 +11,28 @@ public class ETagService(Assembly executionAssembly) : IETagService
 
     public bool EqualsTo(string ifNoneMatch, ulong lastTimestamp, string suffix)
     {
-        var fullLength = ComputeLength(lastTimestamp, suffix);
+        var ltDigitsCount = lastTimestamp.CountDigits();
+
+        var fullLength = ComputeLength(ltDigitsCount, suffix);
         if (fullLength != ifNoneMatch.Length)
             return false;
 
-        var ltDigitCount = lastTimestamp.CountDigits();
-        var incomingETag = ifNoneMatch.AsSpan();
-        var rightEdge = _assemblyBuildTime.Length;
-        var inAsBuildTime = incomingETag[..rightEdge];
-        if (!inAsBuildTime.Equals(_assemblyBuildTime.AsSpan(), StringComparison.Ordinal))
+        var etag = ifNoneMatch.AsSpan();
+
+        var position = _assemblyBuildTime.Length;
+        var eTagAssemBuildTime = etag[..position];
+        if (!eTagAssemBuildTime.Equals(_assemblyBuildTime.AsSpan(), StringComparison.Ordinal))
             return false;
 
-        var inTicks = incomingETag.Slice(++rightEdge, ltDigitCount);
+        var inTicks = etag.Slice(++position, ltDigitsCount);
         if (!inTicks.EqualsLong(lastTimestamp))
             return false;
 
-        rightEdge += ltDigitCount;
-        if (rightEdge == incomingETag.Length)
+        position += ltDigitsCount;
+        if (position == etag.Length)
             return true;
 
-        var inSuffix = incomingETag[++rightEdge..];
+        var inSuffix = etag[++position..];
         if (!inSuffix.Equals(suffix, StringComparison.Ordinal))
             return false;
 
@@ -60,7 +62,10 @@ public class ETagService(Assembly executionAssembly) : IETagService
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private int ComputeLength(ulong lastTimestamp, string suffix) =>
-        _assemblyBuildTime.Length + lastTimestamp.CountDigits() + suffix.Length + (suffix.Length > 0 ? 2 : 1);
+    private int ComputeLength(ulong lastTimestamp, string suffix) => ComputeLength(lastTimestamp.CountDigits(), suffix);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int ComputeLength(int lastTimestampDigitsCount, string suffix) =>
+        _assemblyBuildTime.Length + lastTimestampDigitsCount + suffix.Length + (suffix.Length > 0 ? 2 : 1);
 
 }
