@@ -12,13 +12,10 @@ public sealed class SourceOperationsResolver(IEnumerable<ISourceOperations> sour
     private readonly ISourceOperations _first =
         sourceOperations.First();
 
+    public ISourceOperations First => _first;
+
     public bool Registered(string sourceId) => _first.SourceId == sourceId || _store.ContainsKey(sourceId);
 
-    public ISourceOperations Resolve(string? sourceId)
-    {
-        if (sourceId is not null && _store.TryGetValue(sourceId, out var value))
-            return value;
-
-        return _first;
-    }
+    public ISourceOperations? TryResolve(string? sourceId) =>
+        (sourceId is not null && _store.TryGetValue(sourceId, out var value)) ? value : null;
 }

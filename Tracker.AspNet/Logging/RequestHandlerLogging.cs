@@ -15,4 +15,7 @@ public static partial class RequestHandlerLogging
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "ETag added to response: {ETag}. TraceId: '{TraceId}'")]
     public static partial void LogETagAdded(this ILogger logger, string etag, string traceId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Source operations provider resolved for request: TraceId - {TraceId}, SourceId - {SourceId}")]
+    public static partial void LogSourceProviderResolved(this ILogger logger, string traceId, string sourceId);
 }

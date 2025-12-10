@@ -22,6 +22,8 @@ public sealed class RequestHandler(
         try
         {
             var operationProvider = GetOperationsProvider(ctx, options, operationsResolver);
+            logger.LogSourceProviderResolved(ctx.TraceIdentifier, operationProvider.SourceId);
+
             var lastTimestamp = await GetLastTimestampValue(options, operationProvider, token);
 
             var ifNoneMatch = ctx.Request.Headers.IfNoneMatch.Count > 0 ? ctx.Request.Headers.IfNoneMatch[0] : null;
@@ -64,6 +66,6 @@ public sealed class RequestHandler(
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static ISourceOperations GetOperationsProvider(
         HttpContext ctx, ImmutableGlobalOptions opt, ISourceOperationsResolver resolver) =>
-        opt.SourceOperations ?? opt.SourceOperationsFactory?.Invoke(ctx) ?? resolver.Resolve(opt.Source) ??
-        throw new NullReferenceException($"Fail to resolve source operations provider for request '{ctx.Request.Path}'");
+        resolver.TryResolve(opt.Source) ?? opt.SourceOperations ?? opt.SourceOperationsFactory?.Invoke(ctx) ??
+        resolver.First ?? throw new NullReferenceException($"Source operations provider not found for request: '{ctx.Request.Path}'");
 }
