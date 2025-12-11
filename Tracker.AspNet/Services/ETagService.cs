@@ -1,39 +1,39 @@
 ﻿using System.Reflection;
+using Tracker.Core.Extensions;
 using System.Runtime.CompilerServices;
 using Tracker.AspNet.Services.Contracts;
-using Tracker.Core.Extensions;
 
 namespace Tracker.AspNet.Services;
 
-public class ETagService(Assembly executionAssembly) : IETagService
+public class ETagService(Assembly assembly) : IETagService
 {
-    private readonly string _assemblyBuildTime = executionAssembly.GetAssemblyWriteTime().Ticks.ToString();
+    private readonly string _assembWriteTime = assembly.GetAssemblyWriteTime().Ticks.ToString();
 
-    public bool EqualsTo(string ifNoneMatch, ulong lastTimestamp, string suffix)
+    public bool EqualsTo(string etag, ulong lastTimestamp, string suffix)
     {
-        var ltDigitsCount = lastTimestamp.CountDigits();
+        var lastTimestampDigitsCount = lastTimestamp.CountDigits();
 
-        var fullLength = ComputeLength(ltDigitsCount, suffix);
-        if (fullLength != ifNoneMatch.Length)
+        var fullLength = ComputeLength(lastTimestampDigitsCount, suffix.Length);
+        if (fullLength != etag.Length)
             return false;
 
-        var etag = ifNoneMatch.AsSpan();
+        var position = _assembWriteTime.Length;
 
-        var position = _assemblyBuildTime.Length;
-        var eTagAssemBuildTime = etag[..position];
-        if (!eTagAssemBuildTime.Equals(_assemblyBuildTime.AsSpan(), StringComparison.Ordinal))
+        var etagSpan = etag.AsSpan();
+        var assemblyWriteTimeSlice = etagSpan[..position];
+        if (!assemblyWriteTimeSlice.Equals(_assembWriteTime.AsSpan(), StringComparison.Ordinal))
             return false;
 
-        var inTicks = etag.Slice(++position, ltDigitsCount);
-        if (!inTicks.EqualsLong(lastTimestamp))
+        var lastTimestampSlice = etagSpan.Slice(++position, lastTimestampDigitsCount);
+        if (!lastTimestampSlice.EqualsULong(lastTimestamp))
             return false;
 
-        position += ltDigitsCount;
-        if (position == etag.Length)
+        position += lastTimestampDigitsCount;
+        if (position == etagSpan.Length)
             return true;
 
-        var inSuffix = etag[++position..];
-        if (!inSuffix.Equals(suffix, StringComparison.Ordinal))
+        var suffixSlice = etagSpan[++position..];
+        if (!suffixSlice.Equals(suffix, StringComparison.Ordinal))
             return false;
 
         return true;
@@ -41,8 +41,8 @@ public class ETagService(Assembly executionAssembly) : IETagService
 
     public string Build(ulong lastTimestamp, string suffix)
     {
-        var fullLength = ComputeLength(lastTimestamp, suffix);
-        return string.Create(fullLength, (_assemblyBuildTime, lastTimestamp, suffix), (chars, state) =>
+        var fullLength = ComputeLength(lastTimestamp.CountDigits(), suffix.Length);
+        return string.Create(fullLength, (_assembWriteTime, lastTimestamp, suffix), (chars, state) =>
         {
             var (asBuildTime, lastTimestamp, suffix) = state;
 
@@ -51,10 +51,10 @@ public class ETagService(Assembly executionAssembly) : IETagService
             chars[position++] = '-';
 
             lastTimestamp.TryFormat(chars[position..], out var written);
+            position += written;
 
-            if (!string.IsNullOrEmpty(suffix))
+            if (chars.Length < position)
             {
-                position += written;
                 chars[position++] = '-';
                 suffix.AsSpan().CopyTo(chars[position..]);
             }
@@ -62,9 +62,6 @@ public class ETagService(Assembly executionAssembly) : IETagService
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private int ComputeLength(ulong lastTimestamp, string suffix) => ComputeLength(lastTimestamp.CountDigits(), suffix);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private int ComputeLength(int lastTimestampDigitsCount, string suffix) =>
-        _assemblyBuildTime.Length + lastTimestampDigitsCount + suffix.Length + (suffix.Length > 0 ? 2 : 1);
+    private int ComputeLength(int ltDigitsCount, int suffixLength) =>
+        _assembWriteTime.Length + ltDigitsCount + suffixLength + (suffixLength > 0 ? 2 : 1);
 }

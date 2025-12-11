@@ -2,7 +2,7 @@
 
 public static class EqualExtensions
 {
-    public static bool EqualsLong(this ReadOnlySpan<char> chars, ulong number)
+    public static bool EqualsULong(this ReadOnlySpan<char> chars, ulong number)
     {
         if (chars.Length > 19)
             return false;

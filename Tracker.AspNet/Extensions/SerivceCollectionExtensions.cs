@@ -73,6 +73,7 @@ public static class SerivceCollectionExtensions
         services.AddSingleton<IOptionsBuilder<GlobalOptions, ImmutableGlobalOptions>, GlobalOptionsBuilder>();
 
         services.AddSingleton<IETagService>(new ETagService(Assembly.GetExecutingAssembly()));
+
         services.AddSingleton<IRequestHandler, RequestHandler>();
 
         services.AddSingleton<ISourceOperationsResolver, SourceOperationsResolver>();
