@@ -12,7 +12,7 @@ public interface ISourceOperations
     Task<bool> EnableTracking(string key, CancellationToken token);
     Task<bool> DisableTracking(string key, CancellationToken token);
 
-    Task<bool> IsTracked(string key, CancellationToken token);
+    Task<bool> IsTracking(string key, CancellationToken token);
 
     Task<bool> SetLastTimestamp(string key, DateTimeOffset value, CancellationToken token);
 }

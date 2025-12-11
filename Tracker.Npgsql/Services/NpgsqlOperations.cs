@@ -64,7 +64,7 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
         throw new InvalidOperationException($"Not able to disable tracking for table '{key}'");
     }
 
-    public async Task<bool> IsTracked(string key, CancellationToken token)
+    public async Task<bool> IsTracking(string key, CancellationToken token)
     {
         ArgumentException.ThrowIfNullOrEmpty(key, nameof(key));
 

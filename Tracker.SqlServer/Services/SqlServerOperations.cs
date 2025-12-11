@@ -98,7 +98,7 @@ public sealed class SqlServerOperations : ISourceOperations, IDisposable
         throw new NotImplementedException();
     }
 
-    public Task<bool> IsTracked(string key, CancellationToken token)
+    public Task<bool> IsTracking(string key, CancellationToken token)
     {
         throw new NotImplementedException();
     }
