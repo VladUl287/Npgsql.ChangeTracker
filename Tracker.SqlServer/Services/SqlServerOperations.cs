@@ -1,6 +1,7 @@
-﻿using System.Collections.Immutable;
+﻿using Microsoft.Data.SqlClient;
+using System.Collections.Immutable;
+using System.Data;
 using System.Data.Common;
-using Microsoft.Data.SqlClient;
 using Tracker.Core.Services.Contracts;
 
 namespace Tracker.SqlServer.Services;
@@ -35,9 +36,25 @@ public sealed class SqlServerOperations : ISourceOperations, IDisposable
     {
         ArgumentException.ThrowIfNullOrEmpty(key, nameof(key));
 
-        await Task.Delay(1, token);
+        const string query = $"""
+            SELECT s.last_user_update
+            FROM sys.dm_db_index_usage_stats s
+            INNER JOIN sys.tables t ON s.object_id = t.object_id
+            WHERE database_id = DB_ID() AND t.name = @table_name;
+            """;
 
-        return DateTimeOffset.Parse("12.12.2001");
+        await using var command = _dataSource.CreateCommand(query);
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "@table_name";
+        parameter.Value = key;
+        parameter.DbType = DbType.String;
+        command.Parameters.Add(parameter);
+
+        using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
+        if (await reader.ReadAsync(token))
+            return await reader.GetFieldValueAsync<DateTime?>(0, token) ?? default;
+
+        throw new InvalidOperationException($"Not able to enable tracking for table '{key}'");
     }
 
     public Task GetLastTimestamps(ImmutableArray<string> keys, DateTimeOffset[] timestamps, CancellationToken token)

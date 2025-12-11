@@ -49,12 +49,12 @@ var app = builder.Build();
 
     app.UseAuthorization();
 
-    app.UseTracker<DatabaseContext>(opt =>
-    {
-        opt.Tables = ["roles"];
-        opt.Entities = [typeof(Role)];
-        opt.Filter = (ctx) => ctx.Request.Path.ToString().Contains("roles");
-    });
+    //app.UseTracker<DatabaseContext>(opt =>
+    //{
+    //    opt.Tables = ["roles"];
+    //    opt.Entities = [typeof(Role)];
+    //    opt.Filter = (ctx) => ctx.Request.Path.ToString().Contains("roles");
+    //});
 
     //app.MapGet("/api/role", () => "Get all roles")
     //    .WithTracking();
