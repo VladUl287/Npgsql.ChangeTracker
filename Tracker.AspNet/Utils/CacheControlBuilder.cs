@@ -6,6 +6,7 @@ public sealed class CacheControlBuilder
 
     public CacheControlBuilder WithDirective(string directive)
     {
+        ArgumentException.ThrowIfNullOrEmpty(directive);
         _directives.Add(directive);
         return this;
     }
