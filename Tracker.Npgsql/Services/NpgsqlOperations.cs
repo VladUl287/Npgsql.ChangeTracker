@@ -1,4 +1,5 @@
 ﻿using Npgsql;
+using NpgsqlTypes;
 using System.Collections.Immutable;
 using System.Data;
 using Tracker.Core.Services.Contracts;
@@ -128,6 +129,24 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
         throw new InvalidOperationException("Not able to resolve pg_last_committed_xact");
     }
 
+    public async Task<bool> SetLastTimestamp(string key, DateTimeOffset value, CancellationToken token)
+    {
+        const string setTimestampQuery = $"SELECT set_last_timestamp(@table_name, @timestamp);";
+        await using var command = _dataSource.CreateCommand(setTimestampQuery);
+
+        const string tableParam = "table_name";
+        const string timestampParam = "timestamp";
+        command.Parameters.AddWithValue(tableParam, NpgsqlDbType.Text, key);
+        command.Parameters.AddWithValue(timestampParam, NpgsqlDbType.TimestampTz, value);
+
+        using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
+
+        if (await reader.ReadAsync(token))
+            return await reader.GetFieldValueAsync<bool>(0, token);
+
+        throw new InvalidOperationException($"Not able to set timestamp for table '{key}'");
+    }
+
     public void Dispose()
     {
         Dispose(disposing: true);
@@ -143,11 +162,6 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
             _dataSource?.Dispose();
 
         _disposed = true;
-    }
-
-    public Task<bool> SetLastTimestamp(string key, DateTimeOffset value, CancellationToken token)
-    {
-        throw new NotImplementedException();
     }
 
     ~NpgsqlOperations()
