@@ -6,10 +6,19 @@ using Tracker.Core.Services.Contracts;
 
 namespace Tracker.Core.Services;
 
+/// <summary>
+/// Implementation of <see cref="IETagProvider"/> that uses assembly timestamp
+/// for versioning and supports optional suffix for content-based ETags.
+/// </summary>
+/// <remarks>
+/// This implementation uses <see cref="string.Create{TState}(int, TState, System.Buffers.SpanAction{char, TState})"/> for efficient string
+/// construction and span-based operations for comparison to minimize allocations.
+/// </remarks>
 public class ETagProvider(IAssemblyTimestampProvider assemblyTimestampProvider) : IETagProvider
 {
     private readonly string _assemblyTimestamp = assemblyTimestampProvider.GetWriteTime().Ticks.ToString();
 
+    /// <inheritdoc/>
     public bool Compare(string etag, ulong lastTimestamp, string suffix)
     {
         var timestampDigitCount = lastTimestamp.CountDigits();
@@ -44,6 +53,7 @@ public class ETagProvider(IAssemblyTimestampProvider assemblyTimestampProvider) 
         return suffixSegment.Equals(suffix, StringComparison.Ordinal);
     }
 
+    /// <inheritdoc/>
     public string Generate(ulong lastTimestamp, string suffix)
     {
         var timestampDigitCount = lastTimestamp.CountDigits();
@@ -69,6 +79,21 @@ public class ETagProvider(IAssemblyTimestampProvider assemblyTimestampProvider) 
         });
     }
 
+    /// <summary>
+    /// Calculates the total length of an ETag based on timestamp digit count and suffix length.
+    /// </summary>
+    /// <param name="timestampDigitCount">The number of digits in the timestamp.</param>
+    /// <param name="suffixLength">The length of the suffix string.</param>
+    /// <returns>
+    /// The total character length of the ETag including separators.
+    /// </returns>
+    /// <remarks>
+    /// Calculation formula: assemblyTimestamp.Length + timestampDigitCount + suffixLength + separatorCount
+    /// where separatorCount is 2 if suffixLength > 0 (two hyphens), otherwise 1 (one hyphen).
+    /// 
+    /// Marked with <see cref="MethodImplOptions.AggressiveInlining"/> for performance optimization
+    /// as this is called in hot paths.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal int CalculateEtagLength(int timestampDigitCount, int suffixLength)
     {
