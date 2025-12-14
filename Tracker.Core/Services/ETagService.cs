@@ -1,9 +1,8 @@
 ﻿using System.Runtime.CompilerServices;
-using Tracker.AspNet.Services.Contracts;
 using Tracker.Core.Extensions;
 using Tracker.Core.Services.Contracts;
 
-namespace Tracker.AspNet.Services;
+namespace Tracker.Core.Services;
 
 public class ETagService(IAssemblyTimestampProvider assemblyTimestampProvider) : IETagService
 {

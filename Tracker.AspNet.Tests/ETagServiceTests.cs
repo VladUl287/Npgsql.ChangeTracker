@@ -1,6 +1,6 @@
 ﻿using Moq;
 using System.Reflection;
-using Tracker.AspNet.Services;
+using Tracker.Core.Services;
 using Tracker.Core.Services.Contracts;
 
 namespace Tracker.AspNet.Tests;

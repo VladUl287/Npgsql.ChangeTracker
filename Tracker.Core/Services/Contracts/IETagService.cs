@@ -1,4 +1,4 @@
-﻿namespace Tracker.AspNet.Services.Contracts;
+﻿namespace Tracker.Core.Services.Contracts;
 
 public interface IETagService
 {
