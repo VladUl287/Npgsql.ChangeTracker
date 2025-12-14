@@ -14,7 +14,7 @@ namespace Tracker.Core.Services;
 /// This implementation uses <see cref="string.Create{TState}(int, TState, System.Buffers.SpanAction{char, TState})"/> for efficient string
 /// construction and span-based operations for comparison to minimize allocations.
 /// </remarks>
-public class ETagProvider(IAssemblyTimestampProvider assemblyTimestampProvider) : IETagProvider
+public sealed class ETagProvider(IAssemblyTimestampProvider assemblyTimestampProvider) : IETagProvider
 {
     private readonly string _assemblyTimestamp = assemblyTimestampProvider.GetWriteTime().Ticks.ToString();
 
