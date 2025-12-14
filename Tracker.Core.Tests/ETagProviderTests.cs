@@ -3,16 +3,16 @@ using System.Reflection;
 using Tracker.Core.Services;
 using Tracker.Core.Services.Contracts;
 
-namespace Tracker.AspNet.Tests;
+namespace Tracker.Core.Tests;
 
-public class ETagServiceTests
+public class ETagProviderTests
 {
     private readonly Mock<IAssemblyTimestampProvider> _mockAssembly;
     private readonly DateTime _fixedAssemblyWriteTime;
     private readonly string _fixedAssemblyTicks;
     private const string _fixedAssemblyTicksString = "638397072000000000";
 
-    public ETagServiceTests()
+    public ETagProviderTests()
     {
         _fixedAssemblyWriteTime = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         _fixedAssemblyTicks = _fixedAssemblyWriteTime.Ticks.ToString();
@@ -28,7 +28,7 @@ public class ETagServiceTests
         var assembly = _mockAssembly.Object;
 
         // Act
-        var service = new ETagService(assembly);
+        var service = new ETagProvider(assembly);
 
         // Assert - We can't directly test private field, but we can test its effect
         Assert.NotNull(service);
@@ -42,11 +42,11 @@ public class ETagServiceTests
     public void Build_ShouldCreateCorrectETag(ulong lastTimestamp, string suffix, string expectedBody)
     {
         // Arrange
-        var service = new ETagService(_mockAssembly.Object);
+        var service = new ETagProvider(_mockAssembly.Object);
         var expectedETag = _fixedAssemblyTicks + "-" + expectedBody;
 
         // Act
-        var result = service.Build(lastTimestamp, suffix);
+        var result = service.Generate(lastTimestamp, suffix);
 
         // Assert
         Assert.Equal(expectedETag, result);
@@ -56,11 +56,11 @@ public class ETagServiceTests
     public void Build_WithZeroTimestampAndEmptySuffix_ShouldCreateCorrectETag()
     {
         // Arrange
-        var service = new ETagService(_mockAssembly.Object);
+        var service = new ETagProvider(_mockAssembly.Object);
         var expected = _fixedAssemblyTicks + "-0";
 
         // Act
-        var result = service.Build(0UL, "");
+        var result = service.Generate(0UL, "");
 
         // Assert
         Assert.Equal(expected, result);
@@ -74,12 +74,12 @@ public class ETagServiceTests
     public void EqualsTo_ShouldReturnCorrectResult(ulong lastTimestamp, string suffix, bool shouldMatch)
     {
         // Arrange
-        var service = new ETagService(_mockAssembly.Object);
-        var etag = service.Build(lastTimestamp, suffix);
+        var service = new ETagProvider(_mockAssembly.Object);
+        var etag = service.Generate(lastTimestamp, suffix);
         var wrongSuffix = shouldMatch ? suffix : "wrong" + suffix;
 
         // Act
-        var result = service.EqualsTo(etag, lastTimestamp, wrongSuffix);
+        var result = service.Compare(etag, lastTimestamp, wrongSuffix);
 
         // Assert
         Assert.Equal(shouldMatch, result);
@@ -89,17 +89,17 @@ public class ETagServiceTests
     public void EqualsTo_WithWrongAssemblyTime_ShouldReturnFalse()
     {
         // Arrange
-        var service = new ETagService(_mockAssembly.Object);
-        var etag = service.Build(123UL, "test");
+        var service = new ETagProvider(_mockAssembly.Object);
+        var etag = service.Generate(123UL, "test");
 
         // Create a different assembly time
         var differentTime = new DateTime(2024, 1, 2, 12, 0, 0, DateTimeKind.Utc);
         var differentMockAssembly = new Mock<IAssemblyTimestampProvider>();
         differentMockAssembly.Setup(a => a.GetWriteTime()).Returns(differentTime);
-        var differentService = new ETagService(differentMockAssembly.Object);
+        var differentService = new ETagProvider(differentMockAssembly.Object);
 
         // Act
-        var result = differentService.EqualsTo(etag, 123UL, "test");
+        var result = differentService.Compare(etag, 123UL, "test");
 
         // Assert
         Assert.False(result);
@@ -113,10 +113,10 @@ public class ETagServiceTests
     public void EqualsTo_WithInvalidLengthETag_ShouldReturnFalse(string invalidEtag)
     {
         // Arrange
-        var service = new ETagService(_mockAssembly.Object);
+        var service = new ETagProvider(_mockAssembly.Object);
 
         // Act
-        var result = service.EqualsTo(invalidEtag, 123UL, "test");
+        var result = service.Compare(invalidEtag, 123UL, "test");
 
         // Assert
         Assert.False(result);
@@ -126,11 +126,11 @@ public class ETagServiceTests
     public void EqualsTo_WithWrongTimestamp_ShouldReturnFalse()
     {
         // Arrange
-        var service = new ETagService(_mockAssembly.Object);
-        var etag = service.Build(123UL, "test");
+        var service = new ETagProvider(_mockAssembly.Object);
+        var etag = service.Generate(123UL, "test");
 
         // Act
-        var result = service.EqualsTo(etag, 456UL, "test");
+        var result = service.Compare(etag, 456UL, "test");
 
         // Assert
         Assert.False(result);
@@ -140,11 +140,11 @@ public class ETagServiceTests
     public void EqualsTo_WithEmptySuffixAndValidEtag_ShouldReturnTrue()
     {
         // Arrange
-        var service = new ETagService(_mockAssembly.Object);
-        var etag = service.Build(123UL, "");
+        var service = new ETagProvider(_mockAssembly.Object);
+        var etag = service.Generate(123UL, "");
 
         // Act
-        var result = service.EqualsTo(etag, 123UL, "");
+        var result = service.Compare(etag, 123UL, "");
 
         // Assert
         Assert.True(result);
@@ -154,23 +154,23 @@ public class ETagServiceTests
     public void EqualsTo_WithNullEtag_ShouldReturnFalse()
     {
         // Arrange
-        var service = new ETagService(_mockAssembly.Object);
+        var service = new ETagProvider(_mockAssembly.Object);
 
         // Act & Assert
         Assert.Throws<NullReferenceException>(() =>
-            service.EqualsTo(null!, 123UL, "test"));
+            service.Compare(null!, 123UL, "test"));
     }
 
     [Fact]
     public void EqualsTo_WithCorrectEtagButDifferentCasing_ShouldReturnFalse()
     {
         // Arrange
-        var service = new ETagService(_mockAssembly.Object);
-        var etag = service.Build(123UL, "TestSuffix");
+        var service = new ETagProvider(_mockAssembly.Object);
+        var etag = service.Generate(123UL, "TestSuffix");
         var uppercaseEtag = etag.ToUpperInvariant();
 
         // Act
-        var result = service.EqualsTo(uppercaseEtag, 123UL, "TestSuffix");
+        var result = service.Compare(uppercaseEtag, 123UL, "TestSuffix");
 
         // Assert
         Assert.False(result); // Because StringComparison.Ordinal is used
@@ -186,12 +186,12 @@ public class ETagServiceTests
     public void Build_WithVariousTimestamps_ShouldHaveCorrectLength(ulong timestamp, int expectedDigitCount)
     {
         // Arrange
-        var service = new ETagService(_mockAssembly.Object);
+        var service = new ETagProvider(_mockAssembly.Object);
         var suffix = "test";
         var expectedLength = _fixedAssemblyTicks.Length + expectedDigitCount + suffix.Length + 2;
 
         // Act
-        var result = service.Build(timestamp, suffix);
+        var result = service.Generate(timestamp, suffix);
 
         // Assert
         Assert.Equal(expectedLength, result.Length);
@@ -201,7 +201,7 @@ public class ETagServiceTests
     public void Build_And_EqualsTo_ShouldBeSymmetric()
     {
         // Arrange
-        var service = new ETagService(_mockAssembly.Object);
+        var service = new ETagProvider(_mockAssembly.Object);
         var testCases = new[]
         {
             (123UL, "suffix1"),
@@ -214,8 +214,8 @@ public class ETagServiceTests
         foreach (var (timestamp, suffix) in testCases)
         {
             // Act
-            var etag = service.Build(timestamp, suffix);
-            var isValid = service.EqualsTo(etag, timestamp, suffix);
+            var etag = service.Generate(timestamp, suffix);
+            var isValid = service.Compare(etag, timestamp, suffix);
 
             // Assert
             Assert.True(isValid, $"Failed for timestamp={timestamp}, suffix='{suffix}'");
@@ -226,8 +226,8 @@ public class ETagServiceTests
     public void ComputeLength_PrivateMethod_EdgeCases()
     {
         // Note: This test requires using reflection to test the private method
-        var service = new ETagService(_mockAssembly.Object);
-        var method = typeof(ETagService).GetMethod("ComputeLength",
+        var service = new ETagProvider(_mockAssembly.Object);
+        var method = typeof(ETagProvider).GetMethod("ComputeLength",
             BindingFlags.NonPublic | BindingFlags.Instance);
 
         // Test with empty suffix

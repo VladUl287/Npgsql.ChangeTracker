@@ -11,7 +11,7 @@ namespace Tracker.AspNet.Tests;
 
 public class RequestHandlerTests
 {
-    private readonly Mock<IETagService> _mockETagService;
+    private readonly Mock<IETagProvider> _mockETagService;
     private readonly Mock<ISourceOperationsResolver> _mockOperationsResolver;
     private readonly Mock<ITimestampsHasher> _mockTimestampsHasher;
     private readonly Mock<ILogger<RequestHandler>> _mockLogger;
@@ -19,7 +19,7 @@ public class RequestHandlerTests
 
     public RequestHandlerTests()
     {
-        _mockETagService = new Mock<IETagService>();
+        _mockETagService = new Mock<IETagProvider>();
         _mockOperationsResolver = new Mock<ISourceOperationsResolver>();
         _mockTimestampsHasher = new Mock<ITimestampsHasher>();
         _mockLogger = new Mock<ILogger<RequestHandler>>();
@@ -90,9 +90,9 @@ public class RequestHandlerTests
         _mockOperationsResolver.Setup(x => x.TryResolve(It.IsAny<string>()))
             .Returns(mockSourceOperations.Object);
 
-        _mockETagService.Setup(x => x.EqualsTo("\"test-etag\"", It.IsAny<ulong>(), It.IsAny<string>()))
+        _mockETagService.Setup(x => x.Compare("\"test-etag\"", It.IsAny<ulong>(), It.IsAny<string>()))
             .Returns(true);
-        _mockETagService.Setup(x => x.Build(It.IsAny<ulong>(), It.IsAny<string>()))
+        _mockETagService.Setup(x => x.Generate(It.IsAny<ulong>(), It.IsAny<string>()))
             .Returns("\"new-etag\"");
 
         // Act
@@ -125,9 +125,9 @@ public class RequestHandlerTests
         _mockOperationsResolver.Setup(x => x.TryResolve(It.IsAny<string>()))
             .Returns(mockSourceOperations.Object);
 
-        _mockETagService.Setup(x => x.EqualsTo("\"old-etag\"", It.IsAny<ulong>(), It.IsAny<string>()))
+        _mockETagService.Setup(x => x.Compare("\"old-etag\"", It.IsAny<ulong>(), It.IsAny<string>()))
             .Returns(false);
-        _mockETagService.Setup(x => x.Build(It.IsAny<ulong>(), It.IsAny<string>()))
+        _mockETagService.Setup(x => x.Generate(It.IsAny<ulong>(), It.IsAny<string>()))
             .Returns("\"new-etag\"");
 
         // Act

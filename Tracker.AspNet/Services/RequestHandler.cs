@@ -10,7 +10,7 @@ using Tracker.Core.Services.Contracts;
 namespace Tracker.AspNet.Services;
 
 public sealed class RequestHandler(
-    IETagService eTagService, ISourceOperationsResolver operationsResolver, ITimestampsHasher timestampsHasher,
+    IETagProvider eTagService, ISourceOperationsResolver operationsResolver, ITimestampsHasher timestampsHasher,
     ILogger<RequestHandler> logger) : IRequestHandler
 {
     public async Task<bool> IsNotModified(HttpContext ctx, ImmutableGlobalOptions options, CancellationToken token)
@@ -29,14 +29,14 @@ public sealed class RequestHandler(
             var ifNoneMatch = ctx.Request.Headers.IfNoneMatch.Count > 0 ? ctx.Request.Headers.IfNoneMatch[0] : null;
 
             var suffix = options.Suffix(ctx);
-            if (ifNoneMatch is not null && eTagService.EqualsTo(ifNoneMatch, lastTimestamp, suffix))
+            if (ifNoneMatch is not null && eTagService.Compare(ifNoneMatch, lastTimestamp, suffix))
             {
                 ctx.Response.StatusCode = StatusCodes.Status304NotModified;
                 logger.LogNotModified(ctx.TraceIdentifier, ifNoneMatch);
                 return true;
             }
 
-            var etag = eTagService.Build(lastTimestamp, suffix);
+            var etag = eTagService.Generate(lastTimestamp, suffix);
             ctx.Response.Headers.CacheControl = options.CacheControl;
             ctx.Response.Headers.ETag = etag;
             logger.LogETagAdded(etag, ctx.TraceIdentifier);
