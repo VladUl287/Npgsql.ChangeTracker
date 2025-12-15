@@ -57,7 +57,7 @@ public sealed class DefaultRequestFilter(ILogger<DefaultRequestFilter> logger) :
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool AnyInvalidCacheControl(
+    public static bool AnyInvalidCacheControl(
         StringValues headers, ReadOnlySpan<string> invalidDirectives, [NotNullWhen(true)] out string? directive)
     {
         directive = null;
