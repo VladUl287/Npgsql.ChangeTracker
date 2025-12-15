@@ -1,4 +1,5 @@
-﻿using Tracker.Core.Services.Contracts;
+﻿using System.Diagnostics.CodeAnalysis;
+using Tracker.Core.Services.Contracts;
 
 namespace Tracker.AspNet.Services.Contracts;
 
@@ -8,5 +9,5 @@ public interface ISourceOperationsResolver
 
     bool Registered(string sourceId);
 
-    ISourceOperations? TryResolve(string? sourceId);
+    bool TryResolve(string sourceId, [NotNullWhen(true)] out ISourceOperations? sourceOperations);
 }

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Frozen;
+using System.Diagnostics.CodeAnalysis;
 using Tracker.AspNet.Services.Contracts;
 using Tracker.Core.Services.Contracts;
 
@@ -16,6 +17,6 @@ public sealed class SourceOperationsResolver(IEnumerable<ISourceOperations> sour
 
     public bool Registered(string sourceId) => _first.SourceId == sourceId || _store.ContainsKey(sourceId);
 
-    public ISourceOperations? TryResolve(string? sourceId) =>
-        (sourceId is not null && _store.TryGetValue(sourceId, out var value)) ? value : null;
+    public bool TryResolve(string sourceId, [NotNullWhen(true)] out ISourceOperations? sourceOperations) => 
+        _store.TryGetValue(sourceId, out sourceOperations);
 }

@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
-using System.Runtime.CompilerServices;
 using Tracker.AspNet.Logging;
 using Tracker.AspNet.Models;
 using Tracker.AspNet.Services.Contracts;
@@ -25,10 +24,10 @@ public sealed class DefaultRequestHandler(
         logger.LogRequestHandleStarted(ctx.TraceIdentifier, ctx.Request.Path);
         try
         {
-            var operationProvider = GetOperationsProvider(ctx, options, operationsResolver);
+            var operationProvider = GetOperationsProvider(ctx, options);
             logger.LogSourceProviderResolved(ctx.TraceIdentifier, operationProvider.SourceId);
 
-            var lastTimestamp = await GetLastTimestampValue(options, operationProvider, token);
+            var lastTimestamp = await GetLastTimestampAsync(options, operationProvider, token);
 
             var ifNoneMatch = ctx.Request.Headers.IfNoneMatch.Count > 0 ? ctx.Request.Headers.IfNoneMatch[0] : null;
 
@@ -52,26 +51,41 @@ public sealed class DefaultRequestHandler(
         }
     }
 
-    private async Task<ulong> GetLastTimestampValue(ImmutableGlobalOptions options, ISourceOperations sourceOperations, CancellationToken token)
+    private async Task<ulong> GetLastTimestampAsync(ImmutableGlobalOptions options, ISourceOperations sourceOperations, CancellationToken token)
     {
-        if (options is { Tables.Length: 0 })
-            return (ulong)(await sourceOperations.GetLastTimestamp(token)).Ticks;
-
-        if (options is { Tables.Length: 1 })
-            return (ulong)(await sourceOperations.GetLastTimestamp(options.Tables[0], token)).Ticks;
-
-        var timestamps = ArrayPool<DateTimeOffset>.Shared.Rent(options.Tables.Length);
-        await sourceOperations.GetLastTimestamps(options.Tables, timestamps, token);
-        var hash = timestampsHasher.Hash(timestamps.AsSpan(0, options.Tables.Length));
-        ArrayPool<DateTimeOffset>.Shared.Return(timestamps);
-        return hash;
+        switch (options.Tables.Length)
+        {
+            case 0:
+                var timestamp = await sourceOperations.GetLastTimestamp(token);
+                var ticks = (ulong)timestamp.Ticks;
+                return ticks;
+            case 1:
+                var tableName = options.Tables[0];
+                var singleTableTimestamp = await sourceOperations.GetLastTimestamp(tableName, token);
+                return (ulong)singleTableTimestamp.Ticks;
+            default:
+                var timestamps = ArrayPool<DateTimeOffset>.Shared.Rent(options.Tables.Length);
+                await sourceOperations.GetLastTimestamps(options.Tables, timestamps, token);
+                var hash = timestampsHasher.Hash(timestamps.AsSpan(0, options.Tables.Length));
+                ArrayPool<DateTimeOffset>.Shared.Return(timestamps);
+                return hash;
+        }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ISourceOperations GetOperationsProvider(HttpContext ctx, ImmutableGlobalOptions opt, ISourceOperationsResolver resolver) =>
-        resolver.TryResolve(opt.Source) ??
-        opt.SourceOperations ??
-        opt.SourceOperationsFactory?.Invoke(ctx) ??
-        resolver.First ??
-        throw new NullReferenceException($"Source operations provider not found. TraceId - '{ctx.TraceIdentifier}'");
+    private ISourceOperations GetOperationsProvider(HttpContext ctx, ImmutableGlobalOptions opt)
+    {
+        if (opt.Source is not null)
+        {
+            if (operationsResolver.TryResolve(opt.Source, out var provider))
+                return provider;
+
+            logger.LogSourceProviderNotRegistered(opt.Source, ctx.TraceIdentifier);
+        }
+
+        return
+            opt.SourceOperations ??
+            opt.SourceOperationsFactory?.Invoke(ctx) ??
+            operationsResolver.First ??
+            throw new NullReferenceException($"Source operations provider not found. TraceId - '{ctx.TraceIdentifier}'");
+    }
 }

@@ -18,4 +18,9 @@ public static partial class RequestHandlerLogging
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Source operations provider resolved for request: TraceId - {TraceId}, SourceId - {SourceId}")]
     public static partial void LogSourceProviderResolved(this ILogger logger, string traceId, string sourceId);
+
+    [LoggerMessage(
+        Level = LogLevel.Error, 
+        Message = "Specified source provider '{SourceId}' is not registered. Falling back to default providers. TraceId: {TraceId}")]
+    public static partial void LogSourceProviderNotRegistered(this ILogger logger, string sourceId, string traceId);
 }
