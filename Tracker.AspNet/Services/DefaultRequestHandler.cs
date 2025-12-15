@@ -57,8 +57,7 @@ public sealed class DefaultRequestHandler(
         {
             case 0:
                 var timestamp = await sourceOperations.GetLastTimestamp(token);
-                var ticks = (ulong)timestamp.Ticks;
-                return ticks;
+                return (ulong)timestamp.Ticks;
             case 1:
                 var tableName = options.Tables[0];
                 var singleTableTimestamp = await sourceOperations.GetLastTimestamp(tableName, token);
