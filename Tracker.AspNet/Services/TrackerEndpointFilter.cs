@@ -11,7 +11,7 @@ public sealed class TrackerEndpointFilter(
     {
         var httpCtx = filterCtx.HttpContext;
 
-        if (filter.RequestValid(httpCtx, opts) && await service.IsNotModified(httpCtx, opts, httpCtx.RequestAborted))
+        if (filter.RequestValid(httpCtx, opts) && await service.IsNotModified(httpCtx, opts))
             return Results.StatusCode(StatusCodes.Status304NotModified);
 
         return await next(filterCtx);

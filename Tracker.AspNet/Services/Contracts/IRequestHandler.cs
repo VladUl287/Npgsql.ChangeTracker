@@ -16,10 +16,9 @@ public interface IRequestHandler
     /// </summary>
     /// <param name="context">The HTTP context containing request and response information.</param>
     /// <param name="options">Global configuration options for the application.</param>
-    /// <param name="token">A cancellation token that can be used to cancel the operation.</param>
     /// <returns>
     /// A task that represents the asynchronous operation. The task result is <c>true</c>
     /// if the request content has not been modified and a 304 status was set; otherwise, <c>false</c>.
     /// </returns>
-    Task<bool> IsNotModified(HttpContext context, ImmutableGlobalOptions options, CancellationToken token);
+    Task<bool> IsNotModified(HttpContext context, ImmutableGlobalOptions options);
 }

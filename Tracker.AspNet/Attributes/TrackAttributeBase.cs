@@ -29,7 +29,7 @@ public abstract class TrackAttributeBase : Attribute, IAsyncActionFilter
     private static Task<bool> NotModified(HttpContext httpCtx, ImmutableGlobalOptions options) =>
         httpCtx.RequestServices
             .GetRequiredService<IRequestHandler>()
-            .IsNotModified(httpCtx, options, httpCtx.RequestAborted);
+            .IsNotModified(httpCtx, options);
 
     protected abstract ImmutableGlobalOptions GetOptions(ActionExecutingContext execContext);
 }

@@ -16,7 +16,7 @@ public sealed class DefaultRequestHandler(
     IETagProvider eTagService, ISourceOperationsResolver operationsResolver, ITimestampsHasher timestampsHasher,
     ILogger<DefaultRequestHandler> logger) : IRequestHandler
 {
-    public async Task<bool> IsNotModified(HttpContext ctx, ImmutableGlobalOptions options, CancellationToken token)
+    public async Task<bool> IsNotModified(HttpContext ctx, ImmutableGlobalOptions options)
     {
         ArgumentNullException.ThrowIfNull(ctx, nameof(ctx));
         ArgumentNullException.ThrowIfNull(options, nameof(options));
@@ -29,7 +29,7 @@ public sealed class DefaultRequestHandler(
             var operationProvider = GetOperationsProvider(ctx, options);
             logger.LogSourceProviderResolved(traceId, operationProvider.SourceId);
 
-            var lastTimestamp = await GetLastTimestampAsync(options, operationProvider, token);
+            var lastTimestamp = await GetLastTimestampAsync(options, operationProvider);
 
             var ifNoneMatch = ctx.Request.Headers.IfNoneMatch.Count > 0 ? ctx.Request.Headers.IfNoneMatch[0] : null;
 
@@ -53,20 +53,20 @@ public sealed class DefaultRequestHandler(
         }
     }
 
-    private async Task<ulong> GetLastTimestampAsync(ImmutableGlobalOptions options, ISourceOperations sourceOperations, CancellationToken token)
+    private async Task<ulong> GetLastTimestampAsync(ImmutableGlobalOptions options, ISourceOperations sourceOperations)
     {
         switch (options.Tables.Length)
         {
             case 0:
-                var timestamp = await sourceOperations.GetLastTimestamp(token);
+                var timestamp = await sourceOperations.GetLastTimestamp(default);
                 return (ulong)timestamp.Ticks;
             case 1:
                 var tableName = options.Tables[0];
-                var singleTableTimestamp = await sourceOperations.GetLastTimestamp(tableName, token);
+                var singleTableTimestamp = await sourceOperations.GetLastTimestamp(tableName, default);
                 return (ulong)singleTableTimestamp.Ticks;
             default:
                 var timestamps = ArrayPool<DateTimeOffset>.Shared.Rent(options.Tables.Length);
-                await sourceOperations.GetLastTimestamps(options.Tables, timestamps, token);
+                await sourceOperations.GetLastTimestamps(options.Tables, timestamps, default);
                 var hash = timestampsHasher.Hash(timestamps.AsSpan(0, options.Tables.Length));
                 ArrayPool<DateTimeOffset>.Shared.Return(timestamps);
                 return hash;

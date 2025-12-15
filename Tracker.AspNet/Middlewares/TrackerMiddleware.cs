@@ -10,7 +10,7 @@ public sealed class TrackerMiddleware(
 {
     public async Task InvokeAsync(HttpContext ctx)
     {
-        if (filter.RequestValid(ctx, opts) && await service.IsNotModified(ctx, opts, ctx.RequestAborted))
+        if (filter.RequestValid(ctx, opts) && await service.IsNotModified(ctx, opts))
             return;
 
         await next(ctx);
