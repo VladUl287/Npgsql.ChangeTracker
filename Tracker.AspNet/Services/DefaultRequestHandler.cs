@@ -50,10 +50,7 @@ public sealed class DefaultRequestHandler(
     }
 
     private async Task<ulong> GetLastTimestampAsync(
-     HttpContext context,
-     ImmutableGlobalOptions options,
-     ISourceOperations sourceOperations,
-     CancellationToken token)
+        HttpContext context, ImmutableGlobalOptions options, ISourceOperations sourceOperations, CancellationToken token)
     {
         var traceId = context.TraceIdentifier;
         var sourceId = sourceOperations.SourceId;
