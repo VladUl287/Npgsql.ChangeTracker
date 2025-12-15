@@ -14,17 +14,17 @@ public class RequestHandlerTests
     private readonly Mock<IETagProvider> _mockETagService;
     private readonly Mock<ISourceOperationsResolver> _mockOperationsResolver;
     private readonly Mock<ITimestampsHasher> _mockTimestampsHasher;
-    private readonly Mock<ILogger<RequestHandler>> _mockLogger;
-    private readonly RequestHandler _handler;
+    private readonly Mock<ILogger<DefaultRequestHandler>> _mockLogger;
+    private readonly DefaultRequestHandler _handler;
 
     public RequestHandlerTests()
     {
         _mockETagService = new Mock<IETagProvider>();
         _mockOperationsResolver = new Mock<ISourceOperationsResolver>();
         _mockTimestampsHasher = new Mock<ITimestampsHasher>();
-        _mockLogger = new Mock<ILogger<RequestHandler>>();
+        _mockLogger = new Mock<ILogger<DefaultRequestHandler>>();
 
-        _handler = new RequestHandler(
+        _handler = new DefaultRequestHandler(
             _mockETagService.Object,
             _mockOperationsResolver.Object,
             _mockTimestampsHasher.Object,
@@ -37,13 +37,13 @@ public class RequestHandlerTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new RequestHandler(null, _mockOperationsResolver.Object, _mockTimestampsHasher.Object, _mockLogger.Object));
+            new DefaultRequestHandler(null, _mockOperationsResolver.Object, _mockTimestampsHasher.Object, _mockLogger.Object));
         Assert.Throws<ArgumentNullException>(() =>
-            new RequestHandler(_mockETagService.Object, null, _mockTimestampsHasher.Object, _mockLogger.Object));
+            new DefaultRequestHandler(_mockETagService.Object, null, _mockTimestampsHasher.Object, _mockLogger.Object));
         Assert.Throws<ArgumentNullException>(() =>
-            new RequestHandler(_mockETagService.Object, _mockOperationsResolver.Object, null, _mockLogger.Object));
+            new DefaultRequestHandler(_mockETagService.Object, _mockOperationsResolver.Object, null, _mockLogger.Object));
         Assert.Throws<ArgumentNullException>(() =>
-            new RequestHandler(_mockETagService.Object, _mockOperationsResolver.Object, _mockTimestampsHasher.Object, null));
+            new DefaultRequestHandler(_mockETagService.Object, _mockOperationsResolver.Object, _mockTimestampsHasher.Object, null));
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class RequestHandlerTests
         }
 
         // Act
-        var method = typeof(RequestHandler)
+        var method = typeof(DefaultRequestHandler)
             .GetMethod("GetLastTimestampValue", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
         var result = await (Task<ulong>)method.Invoke(_handler, new object[] { options, mockSourceOperations.Object, CancellationToken.None });

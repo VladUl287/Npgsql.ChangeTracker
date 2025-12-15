@@ -16,7 +16,7 @@ public interface IRequestFilter
     /// <param name="context">The HTTP context containing request and response details to evaluate.</param>
     /// <param name="options">The immutable global configuration options defining ETag behavior rules.</param>
     /// <returns>
-    /// <c>true</c> if the provided context matches the expected validation rules, otherwise, <c>false</c>.
+    /// <c>true</c> if the provided context matches the expected validation rules; otherwise, <c>false</c>.
     /// </returns>
     bool RequestValid(HttpContext context, ImmutableGlobalOptions options);
 }

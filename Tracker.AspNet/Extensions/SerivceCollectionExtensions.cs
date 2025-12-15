@@ -75,7 +75,7 @@ public static class SerivceCollectionExtensions
         services.AddSingleton<IAssemblyTimestampProvider>(new AssemblyTimestampProvider(Assembly.GetExecutingAssembly()));
         services.AddSingleton<IETagProvider, DefaultETagProvider>();
 
-        services.AddSingleton<IRequestHandler, RequestHandler>();
+        services.AddSingleton<IRequestHandler, DefaultRequestHandler>();
 
         services.AddSingleton<ISourceOperationsResolver, SourceOperationsResolver>();
 

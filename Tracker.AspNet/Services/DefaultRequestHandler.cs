@@ -9,9 +9,13 @@ using Tracker.Core.Services.Contracts;
 
 namespace Tracker.AspNet.Services;
 
-public sealed class RequestHandler(
+/// <summary>
+/// Basic implementation of <see cref="IRequestHandler"/> which determines if the requested data has not been modified, 
+/// allowing a 304 Not Modified status code to be returned.
+/// </summary>
+public sealed class DefaultRequestHandler(
     IETagProvider eTagService, ISourceOperationsResolver operationsResolver, ITimestampsHasher timestampsHasher,
-    ILogger<RequestHandler> logger) : IRequestHandler
+    ILogger<DefaultRequestHandler> logger) : IRequestHandler
 {
     public async Task<bool> IsNotModified(HttpContext ctx, ImmutableGlobalOptions options, CancellationToken token)
     {
