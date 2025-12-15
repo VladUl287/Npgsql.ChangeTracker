@@ -11,6 +11,9 @@ namespace Tracker.AspNet.Services;
 
 public sealed class DefaultRequestFilter(ILogger<DefaultRequestFilter> logger) : IRequestFilter
 {
+    private static readonly string[] _invalidRequestDirectives = ["no-transform", "no-store"];
+    private static readonly string[] _invalidResponseDirectives = ["no-transform", "no-store", "immutable"];
+
     public bool RequestValid(HttpContext ctx, ImmutableGlobalOptions options)
     {
         logger.LogFilterStarted(ctx.TraceIdentifier, ctx.Request.Path);
@@ -27,13 +30,13 @@ public sealed class DefaultRequestFilter(ILogger<DefaultRequestFilter> logger) :
             return false;
         }
 
-        if (AnyInvalidCacheControl(ctx.Request.Headers.CacheControl, out var reqDirective))
+        if (AnyInvalidCacheControl(ctx.Request.Headers.CacheControl, _invalidRequestDirectives, out var reqDirective))
         {
             logger.LogRequestNotValidCacheControlDirective(reqDirective, ctx.TraceIdentifier);
             return false;
         }
 
-        if (AnyInvalidCacheControl(ctx.Response.Headers.CacheControl, out var resDirective))
+        if (AnyInvalidCacheControl(ctx.Response.Headers.CacheControl, _invalidResponseDirectives, out var resDirective))
         {
             logger.LogResponseNotValidCacheControlDirective(resDirective, ctx.TraceIdentifier);
             return false;
@@ -50,30 +53,26 @@ public sealed class DefaultRequestFilter(ILogger<DefaultRequestFilter> logger) :
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool AnyInvalidCacheControl(StringValues cacheControlHeaders, [NotNullWhen(true)] out string? directive)
+    private static bool AnyInvalidCacheControl(
+        StringValues headers, ReadOnlySpan<string> invalidDirectives, [NotNullWhen(true)] out string? directive)
     {
         directive = null;
 
-        if (cacheControlHeaders.Count == 0)
+        if (headers.Count == 0)
             return false;
 
-        const string IMMUTABLE = "immutable";
-        const string NO_STORE = "no-store";
-        foreach (var header in cacheControlHeaders)
+        foreach (var header in headers)
         {
             if (header is null)
                 continue;
 
-            if (header.Contains(IMMUTABLE, StringComparison.OrdinalIgnoreCase))
+            foreach (var invalidDirective in invalidDirectives)
             {
-                directive = IMMUTABLE;
-                return true;
-            }
-
-            if (header.Contains(NO_STORE, StringComparison.OrdinalIgnoreCase))
-            {
-                directive = NO_STORE;
-                return true;
+                if (header.Contains(invalidDirective, StringComparison.OrdinalIgnoreCase))
+                {
+                    directive = invalidDirective;
+                    return true;
+                }
             }
         }
 
