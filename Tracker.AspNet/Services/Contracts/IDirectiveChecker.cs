@@ -5,5 +5,7 @@ namespace Tracker.AspNet.Services.Contracts;
 
 public interface IDirectiveChecker
 {
+    string[] DefaultInvalidRequestDirectives { get; }
+    string[] DefaultInvalidResponseDirectives { get; }
     bool AnyInvalidDirective(StringValues headers, ReadOnlySpan<string> invalidDirectives, [NotNullWhen(true)] out string? directive);
 }
