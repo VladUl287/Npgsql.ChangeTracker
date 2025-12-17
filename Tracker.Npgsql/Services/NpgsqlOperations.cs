@@ -1,4 +1,5 @@
-﻿using Npgsql;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Npgsql;
 using System.Collections.Immutable;
 using System.Data;
 using Tracker.Core.Services.Contracts;
@@ -89,13 +90,21 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
         throw new InvalidOperationException($"Not able to resolve timestamp for table '{key}'");
     }
 
-    public async ValueTask GetLastTimestamps(ImmutableArray<string> keys, DateTimeOffset[] timestamps, CancellationToken token = default)
+    public ValueTask GetLastTimestamps(ImmutableArray<string> keys, DateTimeOffset[] timestamps, CancellationToken token = default)
     {
-        if (keys.Length > timestamps.Length)
-            throw new ArgumentException("Length timestamps array less then keys count");
+        const string GetTimestampQuery = "SELECT get_last_timestamps(@table_name);";
+        using var command = _dataSource.CreateCommand(GetTimestampQuery);
+        command.Parameters.AddWithValue(TABLE_NAME_PARAM, NpgsqlTypes.NpgsqlDbType.Array, keys);
 
-        for (int i = 0; i < keys.Length; i++)
-            timestamps[i] = await GetLastTimestamp(keys[i], token);
+        using var reader = command.ExecuteReader(CommandBehavior.SingleRow);
+        if (reader.Read())
+        {
+            var timestampsResult = reader.GetFieldValue<DateTimeOffset[]>(0);
+            timestampsResult.CopyTo(timestamps, 0);
+            return ValueTask.CompletedTask;
+        }
+
+        throw new InvalidOperationException($"Not able to resolve timestamp for tables");
     }
 
     public ValueTask<DateTimeOffset> GetLastTimestamp(CancellationToken token = default)
