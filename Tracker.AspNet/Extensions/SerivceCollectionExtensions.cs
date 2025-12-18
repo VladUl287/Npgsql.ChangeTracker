@@ -68,7 +68,7 @@ public static class SerivceCollectionExtensions
     {
         services.AddSingleton<ISourceIdGenerator, DefaultSourceIdGenerator>();
 
-        services.AddSingleton<ITimestampsHasher, XxHash64Hasher>();
+        services.AddSingleton<ITrackerHasher, XxHash64Hasher>();
 
         services.AddSingleton<IOptionsBuilder<GlobalOptions, ImmutableGlobalOptions>, GlobalOptionsBuilder>();
 

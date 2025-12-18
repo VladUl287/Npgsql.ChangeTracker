@@ -6,7 +6,7 @@ using Tracker.Core.Services.Contracts;
 
 namespace Tracker.Core.Services;
 
-public sealed class XxHash64Hasher : ITimestampsHasher
+public sealed class XxHash64Hasher : ITrackerHasher
 {
     private const int StackAllocThreshold = 64;
 

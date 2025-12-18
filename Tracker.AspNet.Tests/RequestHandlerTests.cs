@@ -13,7 +13,7 @@ public class RequestHandlerTests
 {
     private readonly Mock<IETagProvider> _mockETagService;
     private readonly Mock<ISourceOperationsResolver> _mockOperationsResolver;
-    private readonly Mock<ITimestampsHasher> _mockTimestampsHasher;
+    private readonly Mock<ITrackerHasher> _mockTimestampsHasher;
     private readonly Mock<ILogger<DefaultRequestHandler>> _mockLogger;
     private readonly DefaultRequestHandler _handler;
 
@@ -21,7 +21,7 @@ public class RequestHandlerTests
     {
         _mockETagService = new Mock<IETagProvider>();
         _mockOperationsResolver = new Mock<ISourceOperationsResolver>();
-        _mockTimestampsHasher = new Mock<ITimestampsHasher>();
+        _mockTimestampsHasher = new Mock<ITrackerHasher>();
         _mockLogger = new Mock<ILogger<DefaultRequestHandler>>();
 
         _handler = new DefaultRequestHandler(
