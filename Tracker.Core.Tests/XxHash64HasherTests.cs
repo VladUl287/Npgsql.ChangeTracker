@@ -195,7 +195,7 @@ public class XxHash64HasherTests
         return System.IO.Hashing.XxHash64.HashToUInt64(buffer);
     }
 
-    public delegate ulong HashMethodDelegate(ReadOnlySpan<DateTimeOffset> timestamps);
+    public delegate ulong HashMethodDelegate(ReadOnlySpan<long> timestamps);
 
     [Fact]
     public void HashLittleEndian_And_HashBigEndian_ProduceSameResult_WhenDataIsLittleEndian()
@@ -203,10 +203,10 @@ public class XxHash64HasherTests
         if (!BitConverter.IsLittleEndian)
             return; // Skip on big-endian systems
 
-        var timestamps = new DateTimeOffset[]
+        var timestamps = new long[]
         {
-            new(2024, 1, 1, 12, 0, 0, TimeSpan.Zero),
-            new(2024, 1, 2, 12, 0, 0, TimeSpan.Zero)
+            new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero).Ticks,
+            new DateTimeOffset(2024, 1, 2, 12, 0, 0, TimeSpan.Zero).Ticks
         };
 
         // Get private methods via reflection

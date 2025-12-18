@@ -227,15 +227,13 @@ public class ETagProviderTests
     {
         // Note: This test requires using reflection to test the private method
         var service = new DefaultETagProvider(_mockAssembly.Object);
-        var method = typeof(DefaultETagProvider).GetMethod("ComputeLength",
-            BindingFlags.NonPublic | BindingFlags.Instance);
 
         // Test with empty suffix
-        var length1 = (int)method!.Invoke(service, new object[] { 1, 0 })!;
+        var length1 = service.CalculateEtagLength(1, 0);
         Assert.Equal(_fixedAssemblyTicks.Length + 1 + 1, length1); // assembly + timestamp + 1 dash
 
         // Test with suffix
-        var length2 = (int)method.Invoke(service, new object[] { 3, 5 })!;
+        var length2 = service.CalculateEtagLength(3, 5);
         Assert.Equal(_fixedAssemblyTicks.Length + 3 + 5 + 2, length2); // assembly + timestamp + suffix + 2 dashes
     }
 }

@@ -1,4 +1,5 @@
 ﻿using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Tracker.AspNet.Services;
 using Tracker.Core.Services.Contracts;
 
@@ -189,10 +190,10 @@ public class SourceOperationsResolverTests
         var resolver = new SourceOperationsResolver(sourceOperations);
 
         // Act
-        resolver.TryResolve(null, out var result);
+        Action tryResolve = () => { resolver.TryResolve(null, out var result); };
 
         // Assert
-        Assert.Null(result);
+        Assert.Throws<ArgumentNullException>(tryResolve);
     }
 
     [Fact]

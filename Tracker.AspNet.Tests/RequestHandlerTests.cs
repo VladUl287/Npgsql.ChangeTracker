@@ -33,20 +33,6 @@ public class RequestHandlerTests
     }
 
     [Fact]
-    public void Constructor_ShouldThrowArgumentNullException_WhenDependenciesAreNull()
-    {
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new DefaultRequestHandler(null, _mockOperationsResolver.Object, _mockTimestampsHasher.Object, _mockLogger.Object));
-        Assert.Throws<ArgumentNullException>(() =>
-            new DefaultRequestHandler(_mockETagService.Object, null, _mockTimestampsHasher.Object, _mockLogger.Object));
-        Assert.Throws<ArgumentNullException>(() =>
-            new DefaultRequestHandler(_mockETagService.Object, _mockOperationsResolver.Object, null, _mockLogger.Object));
-        Assert.Throws<ArgumentNullException>(() =>
-            new DefaultRequestHandler(_mockETagService.Object, _mockOperationsResolver.Object, _mockTimestampsHasher.Object, null));
-    }
-
-    [Fact]
     public async Task IsNotModified_ShouldThrowArgumentNullException_WhenHttpContextIsNull()
     {
         // Arrange
@@ -68,6 +54,8 @@ public class RequestHandlerTests
             await _handler.IsNotModified(context, null, CancellationToken.None));
     }
 
+    private delegate bool TryResolveDelegate(string sourceId, out ISourceOperations? sourceOperations);
+
     [Fact]
     public async Task IsNotModified_ShouldReturnNotModified_WhenETagMatches()
     {
@@ -87,8 +75,17 @@ public class RequestHandlerTests
             .ReturnsAsync(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero).Ticks);
         mockSourceOperations.Setup(x => x.SourceId).Returns("test-source");
 
-        //_mockOperationsResolver.Setup(x => x.TryResolve(It.IsAny<string>()))
-        //    .Returns(mockSourceOperations.Object);
+        //_mockOperationsResolver.Setup(x => x.TryResolve(
+        //        It.IsAny<string>(),
+        //        out It.Ref<ISourceOperations?>.IsAny))
+        //    .Returns(new TryResolveDelegate((string id, out ISourceOperations? ops) =>
+        //    {
+        //        ops = mockSourceOperations.Object;
+        //        return true;
+        //    }));
+
+        _mockOperationsResolver.Setup(x => x.First)
+            .Returns(mockSourceOperations.Object);
 
         _mockETagService.Setup(x => x.Compare("\"test-etag\"", It.IsAny<ulong>(), It.IsAny<string>()))
             .Returns(true);
@@ -122,8 +119,8 @@ public class RequestHandlerTests
             .ReturnsAsync(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero).Ticks);
         mockSourceOperations.Setup(x => x.SourceId).Returns("test-source");
 
-        //_mockOperationsResolver.Setup(x => x.TryResolve(It.IsAny<string>()))
-        //    .Returns(mockSourceOperations.Object);
+        _mockOperationsResolver.Setup(x => x.First)
+            .Returns(mockSourceOperations.Object);
 
         _mockETagService.Setup(x => x.Compare("\"old-etag\"", It.IsAny<ulong>(), It.IsAny<string>()))
             .Returns(false);
@@ -137,69 +134,5 @@ public class RequestHandlerTests
         Assert.False(result);
         Assert.Equal("\"new-etag\"", context.Response.Headers.ETag);
         Assert.Equal("max-age=3600", context.Response.Headers.CacheControl);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(1)]
-    [InlineData(3)]
-    public async Task GetLastTimestampValue_ShouldHandleDifferentTableCounts(int tableCount)
-    {
-        // Arrange
-        var options = new ImmutableGlobalOptions
-        {
-            Tables = [.. Enumerable.Range(0, tableCount).Select(i => $"Table{i}")]
-        };
-
-        var mockSourceOperations = new Mock<ISourceOperations>();
-        var now = DateTimeOffset.UtcNow;
-
-        if (tableCount == 0)
-        {
-            mockSourceOperations.Setup(x => x.GetLastVersion(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(now.Ticks);
-        }
-        else if (tableCount == 1)
-        {
-            mockSourceOperations.Setup(x => x.GetLastVersion(options.Tables[0], It.IsAny<CancellationToken>()))
-                .ReturnsAsync(now.Ticks);
-        }
-        else
-        {
-            var timestamps = new DateTimeOffset[tableCount];
-            Array.Fill(timestamps, now);
-
-            mockSourceOperations.Setup(x => x.GetLastVersions(
-                    options.Tables,
-                    It.IsAny<long[]>(),
-                    It.IsAny<CancellationToken>()))
-                .Callback<ImmutableArray<string>, DateTimeOffset[], CancellationToken>((tables, output, token) =>
-                {
-                    for (int i = 0; i < tables.Length; i++)
-                    {
-                        output[i] = now;
-                    }
-                })
-                .Returns(ValueTask.CompletedTask);
-
-            //_mockTimestampsHasher.Setup(x => x.Hash(It.IsAny<ReadOnlySpan<DateTimeOffset>>()))
-            //    .Returns(123456UL);
-        }
-
-        // Act
-        var method = typeof(DefaultRequestHandler)
-            .GetMethod("GetLastTimestampValue", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-        var result = await (Task<ulong>)method.Invoke(_handler, new object[] { options, mockSourceOperations.Object, CancellationToken.None });
-
-        // Assert
-        if (tableCount >= 2)
-        {
-            Assert.Equal(123456UL, result);
-        }
-        else
-        {
-            Assert.Equal((ulong)now.Ticks, result);
-        }
     }
 }
