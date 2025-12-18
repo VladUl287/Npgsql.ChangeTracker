@@ -12,6 +12,8 @@ public sealed class GlobalOptions
     public Func<HttpContext, ISourceOperations>? SourceOperationsFactory { get; set; }
 
     public Func<HttpContext, bool> Filter { get; set; } = (_) => true;
+    public HashSet<string> InvalidResponseDirectives { get; init; } = ["no-transform", "no-store"];
+    public HashSet<string> InvalidRequestDirectives { get; init; } = ["no-transform", "no-store", "immutable"];
 
     public string[] Tables { get; set; } = [];
     public Type[] Entities { get; set; } = [];
@@ -29,6 +31,8 @@ public sealed record ImmutableGlobalOptions
     public Func<HttpContext, ISourceOperations>? SourceOperationsFactory { get; init; }
 
     public Func<HttpContext, bool> Filter { get; init; } = (_) => true;
+    public ImmutableArray<string> InvalidResponseDirectives { get; init; } = [];
+    public ImmutableArray<string> InvalidRequestDirectives { get; init; } = [];
 
     public ImmutableArray<string> Tables { get; init; } = [];
 

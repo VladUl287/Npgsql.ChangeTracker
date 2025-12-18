@@ -12,7 +12,7 @@ namespace Tracker.AspNet.Services;
 /// </summary>
 public sealed class DefaultRequestFilter(IDirectiveChecker directiveChecker, ILogger<DefaultRequestFilter> logger) : IRequestFilter
 {
-    public bool RequestValid(HttpContext ctx, ImmutableGlobalOptions options)
+    public bool RequestValid(HttpContext ctx, ImmutableGlobalOptions opts)
     {
         var traceId = new TraceId(ctx);
 
@@ -29,21 +29,19 @@ public sealed class DefaultRequestFilter(IDirectiveChecker directiveChecker, ILo
             return false;
         }
 
-        var defaultRequestDirectives = directiveChecker.DefaultInvalidRequestDirectives;
-        if (directiveChecker.AnyInvalidDirective(ctx.Request.Headers.CacheControl, defaultRequestDirectives, out var reqDirective))
+        if (directiveChecker.AnyInvalidDirective(ctx.Request.Headers.CacheControl, opts.InvalidRequestDirectives.AsSpan(), out var reqDirective))
         {
             logger.LogRequestNotValidCacheControlDirective(reqDirective, traceId);
             return false;
         }
 
-        var defaultResponseDirectives = directiveChecker.DefaultInvalidResponseDirectives;
-        if (directiveChecker.AnyInvalidDirective(ctx.Response.Headers.CacheControl, defaultResponseDirectives, out var resDirective))
+        if (directiveChecker.AnyInvalidDirective(ctx.Response.Headers.CacheControl, opts.InvalidResponseDirectives.AsSpan(), out var resDirective))
         {
             logger.LogResponseNotValidCacheControlDirective(resDirective, traceId);
             return false;
         }
 
-        if (!options.Filter(ctx))
+        if (!opts.Filter(ctx))
         {
             logger.LogFilterRejected(traceId);
             return false;

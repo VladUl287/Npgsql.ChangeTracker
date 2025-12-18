@@ -6,12 +6,6 @@ namespace Tracker.AspNet.Services;
 
 public sealed class DefaltDirectiveChecker : IDirectiveChecker
 {
-    private static readonly string[] _invalidRequestDirectives = ["no-transform", "no-store"];
-    private static readonly string[] _invalidResponseDirectives = ["no-transform", "no-store", "immutable"];
-
-    public ReadOnlySpan<string> DefaultInvalidRequestDirectives => _invalidRequestDirectives;
-    public ReadOnlySpan<string> DefaultInvalidResponseDirectives => _invalidResponseDirectives;
-
     public bool AnyInvalidDirective(StringValues headers, ReadOnlySpan<string> invalidDirectives, [NotNullWhen(true)] out string? directive)
     {
         directive = null;

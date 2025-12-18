@@ -263,10 +263,13 @@ public class DefaultRequestFilterTests
 
 internal static class DefaultRequestFilter_Accessor
 {
+    private static readonly string[] _invalidRequestDirectives = ["no-transform", "no-store"];
+    private static readonly string[] _invalidResponseDirectives = ["no-transform", "no-store", "immutable"];
+
     public static bool AnyInvalidCacheControl(StringValues cacheControlHeaders, out string? directive)
     {
         var checker = new DefaltDirectiveChecker();
-        return checker.AnyInvalidDirective(cacheControlHeaders, checker.DefaultInvalidRequestDirectives, out directive) ||
-            checker.AnyInvalidDirective(cacheControlHeaders, checker.DefaultInvalidResponseDirectives, out directive);
+        return checker.AnyInvalidDirective(cacheControlHeaders, _invalidRequestDirectives, out directive) ||
+            checker.AnyInvalidDirective(cacheControlHeaders, _invalidResponseDirectives, out directive);
     }
 }
