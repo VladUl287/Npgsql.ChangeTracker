@@ -75,7 +75,7 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
             await reader.GetFieldValueAsync<bool>(0, token);
     }
 
-    public async ValueTask<DateTimeOffset> GetLastTimestamp(string key, CancellationToken token = default)
+    public async ValueTask<long> GetLastVersion(string key, CancellationToken token = default)
     {
         const string GetTimestampQuery = "SELECT get_last_timestamp(@table_name);";
         using var command = _dataSource.CreateCommand(GetTimestampQuery);
@@ -84,13 +84,15 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
         using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
         if (await reader.ReadAsync(token))
         {
-            return await reader.GetFieldValueAsync<DateTimeOffset?>(0, token)
+            var timestamp = await reader.GetFieldValueAsync<DateTimeOffset?>(0, token)
                ?? throw new NullReferenceException($"Not able to resolve timestamp for table '{key}'");
+
+            return timestamp.Ticks;
         }
         throw new InvalidOperationException($"Not able to resolve timestamp for table '{key}'");
     }
 
-    public async ValueTask GetLastTimestamps(ImmutableArray<string> keys, DateTimeOffset[] timestamps, CancellationToken token = default)
+    public async ValueTask GetLastVersions(ImmutableArray<string> keys, long[] versions, CancellationToken token = default)
     {
         const string GetTimestampQuery = "SELECT get_last_timestamps(@table_name);";
         using var command = _dataSource.CreateCommand(GetTimestampQuery);
@@ -99,15 +101,16 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
         using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
         if (await reader.ReadAsync(token))
         {
-            var timestampsResult = await reader.GetFieldValueAsync<DateTimeOffset[]>(0);
-            timestampsResult.CopyTo(timestamps, 0);
+            var timestamps = await reader.GetFieldValueAsync<DateTimeOffset[]>(0);
+            for (int i = 0; i < timestamps.Length; i++)
+                versions[i] = timestamps[i].Ticks;
             return;
         }
 
         throw new InvalidOperationException($"Not able to resolve timestamp for tables");
     }
 
-    public async ValueTask<DateTimeOffset> GetLastTimestamp(CancellationToken token = default)
+    public async ValueTask<long> GetLastVersion(CancellationToken token = default)
     {
         const string GetTimestampQuery = "SELECT pg_last_committed_xact();";
         using var command = _dataSource.CreateCommand(GetTimestampQuery);
@@ -117,17 +120,17 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
         {
             var result = await reader.GetFieldValueAsync<object[]?>(0);
             if (result is { Length: > 0 })
-                return (DateTime)result[1];
+                return ((DateTime)result[1]).Ticks;
         }
         throw new InvalidOperationException("Not able to resolve pg_last_committed_xact");
     }
 
-    public async ValueTask<bool> SetLastTimestamp(string key, DateTimeOffset value, CancellationToken token = default)
+    public async ValueTask<bool> SetLastVersion(string key, long value, CancellationToken token = default)
     {
         const string SetTimestampQuery = $"SELECT set_last_timestamp(@table_name, @timestamp);";
         using var command = _dataSource.CreateCommand(SetTimestampQuery);
         command.Parameters.AddWithValue(TABLE_NAME_PARAM, key);
-        command.Parameters.AddWithValue(TIMESTAMP_PARAM, value);
+        command.Parameters.AddWithValue(TIMESTAMP_PARAM, new DateTimeOffset(value, TimeSpan.Zero));
 
         using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
         return

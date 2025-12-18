@@ -83,8 +83,8 @@ public class RequestHandlerTests
         };
 
         var mockSourceOperations = new Mock<ISourceOperations>();
-        mockSourceOperations.Setup(x => x.GetLastTimestamp(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        mockSourceOperations.Setup(x => x.GetLastVersion(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero).Ticks);
         mockSourceOperations.Setup(x => x.SourceId).Returns("test-source");
 
         //_mockOperationsResolver.Setup(x => x.TryResolve(It.IsAny<string>()))
@@ -118,8 +118,8 @@ public class RequestHandlerTests
         };
 
         var mockSourceOperations = new Mock<ISourceOperations>();
-        mockSourceOperations.Setup(x => x.GetLastTimestamp(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        mockSourceOperations.Setup(x => x.GetLastVersion(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero).Ticks);
         mockSourceOperations.Setup(x => x.SourceId).Returns("test-source");
 
         //_mockOperationsResolver.Setup(x => x.TryResolve(It.IsAny<string>()))
@@ -156,22 +156,22 @@ public class RequestHandlerTests
 
         if (tableCount == 0)
         {
-            mockSourceOperations.Setup(x => x.GetLastTimestamp(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(now);
+            mockSourceOperations.Setup(x => x.GetLastVersion(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(now.Ticks);
         }
         else if (tableCount == 1)
         {
-            mockSourceOperations.Setup(x => x.GetLastTimestamp(options.Tables[0], It.IsAny<CancellationToken>()))
-                .ReturnsAsync(now);
+            mockSourceOperations.Setup(x => x.GetLastVersion(options.Tables[0], It.IsAny<CancellationToken>()))
+                .ReturnsAsync(now.Ticks);
         }
         else
         {
             var timestamps = new DateTimeOffset[tableCount];
             Array.Fill(timestamps, now);
 
-            mockSourceOperations.Setup(x => x.GetLastTimestamps(
+            mockSourceOperations.Setup(x => x.GetLastVersions(
                     options.Tables,
-                    It.IsAny<DateTimeOffset[]>(),
+                    It.IsAny<long[]>(),
                     It.IsAny<CancellationToken>()))
                 .Callback<ImmutableArray<string>, DateTimeOffset[], CancellationToken>((tables, output, token) =>
                 {

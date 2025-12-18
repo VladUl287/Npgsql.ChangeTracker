@@ -85,42 +85,39 @@ public class TrackerEndpointFilterBenchmark
 
     private sealed class BenchmarkOperationsProvider : ISourceOperations
     {
-        public string SourceId => string.Empty;
+        public string SourceId => throw new NotImplementedException();
 
-        public ValueTask<bool> DisableTracking(string key, CancellationToken token)
+        public ValueTask<bool> DisableTracking(string key, CancellationToken token = default)
         {
             throw new NotImplementedException();
         }
 
-        public ValueTask<bool> EnableTracking(string key, CancellationToken token)
+        public ValueTask<bool> EnableTracking(string key, CancellationToken token = default)
         {
             throw new NotImplementedException();
         }
 
-        private static readonly DateTimeOffset _timestamp = DateTimeOffset.Parse("2023-01-01");
-
-        public ValueTask<DateTimeOffset> GetLastTimestamp(string key, CancellationToken token)
-        {
-            return ValueTask.FromResult(_timestamp);
-        }
-
-        public ValueTask<DateTimeOffset> GetLastTimestamp(CancellationToken token)
-        {
-            return ValueTask.FromResult(_timestamp);
-        }
-
-        public ValueTask GetLastTimestamps(ImmutableArray<string> keys, DateTimeOffset[] timestamps, CancellationToken token)
-        {
-            timestamps[0] = _timestamp;
-            return ValueTask.CompletedTask;
-        }
-
-        public ValueTask<bool> IsTracking(string key, CancellationToken token)
+        public ValueTask<long> GetLastVersion(string key, CancellationToken token = default)
         {
             throw new NotImplementedException();
         }
 
-        public ValueTask<bool> SetLastTimestamp(string key, DateTimeOffset value, CancellationToken token)
+        public ValueTask<long> GetLastVersion(CancellationToken token = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ValueTask GetLastVersions(ImmutableArray<string> keys, long[] timestamps, CancellationToken token = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ValueTask<bool> IsTracking(string key, CancellationToken token = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ValueTask<bool> SetLastVersion(string key, long value, CancellationToken token = default)
         {
             throw new NotImplementedException();
         }

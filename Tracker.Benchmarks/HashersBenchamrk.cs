@@ -6,7 +6,7 @@ namespace Tracker.Benchmarks;
 [MemoryDiagnoser]
 public class HashersBenchamrk
 {
-    private static readonly DateTimeOffset[] _dateTimestamps = [.. Enumerable.Range(0, 5).Select(i => DateTimeOffset.UtcNow.AddDays(i))];
+    private static readonly long[] _dateTimestamps = [.. Enumerable.Range(0, 5).Select(i => DateTimeOffset.UtcNow.AddDays(i).Ticks)];
 
     public static XxHash64Hasher XxHash64Hasher = new();
 

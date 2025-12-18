@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
-using System.Runtime.CompilerServices;
 using Tracker.AspNet.Logging;
 using Tracker.AspNet.Models;
 using Tracker.AspNet.Services.Contracts;
@@ -59,17 +58,17 @@ public sealed class DefaultRequestHandler(
         switch (options.Tables.Length)
         {
             case 0:
-                var timestamp = await sourceOperations.GetLastTimestamp(default);
-                return (ulong)timestamp.Ticks;
+                var timestamp = await sourceOperations.GetLastVersion(default);
+                return (ulong)timestamp;
             case 1:
                 var tableName = options.Tables[0];
-                var singleTableTimestamp = await sourceOperations.GetLastTimestamp(tableName, default);
-                return (ulong)singleTableTimestamp.Ticks;
+                var singleTableTimestamp = await sourceOperations.GetLastVersion(tableName, default);
+                return (ulong)singleTableTimestamp;
             default:
-                var timestamps = ArrayPool<DateTimeOffset>.Shared.Rent(options.Tables.Length);
-                await sourceOperations.GetLastTimestamps(options.Tables, timestamps, default);
+                var timestamps = ArrayPool<long>.Shared.Rent(options.Tables.Length);
+                await sourceOperations.GetLastVersions(options.Tables, timestamps, default);
                 var hash = timestampsHasher.Hash(timestamps.AsSpan(0, options.Tables.Length));
-                ArrayPool<DateTimeOffset>.Shared.Return(timestamps);
+                ArrayPool<long>.Shared.Return(timestamps);
                 return hash;
         }
     }

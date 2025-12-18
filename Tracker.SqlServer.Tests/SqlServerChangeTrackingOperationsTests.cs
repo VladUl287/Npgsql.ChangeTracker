@@ -202,11 +202,11 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
         await MakeSomeChanges();
 
         // Act
-        var timestamp = await _operations.GetLastTimestamp(CancellationToken.None);
+        var timestamp = await _operations.GetLastVersion(CancellationToken.None);
 
         // Assert
-        Assert.True(timestamp > DateTimeOffset.MinValue);
-        Assert.True(timestamp <= DateTimeOffset.UtcNow);
+        Assert.True(timestamp > DateTimeOffset.MinValue.Ticks);
+        Assert.True(timestamp <= DateTimeOffset.UtcNow.Ticks);
         _output.WriteLine($"Database timestamp: {timestamp}");
     }
 
@@ -218,7 +218,7 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _operations.GetLastTimestamp(nonExistentTable, CancellationToken.None));
+            await _operations.GetLastVersion(nonExistentTable, CancellationToken.None));
     }
 
     [Fact]
@@ -229,7 +229,7 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _operations.GetLastTimestamp(_testTableName, CancellationToken.None));
+            await _operations.GetLastVersion(_testTableName, CancellationToken.None));
     }
 
     [Fact]
@@ -315,18 +315,18 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
         await _operations.EnableTracking(_testTableName, CancellationToken.None);
 
         // Get initial timestamp
-        var timestamp1 = await _operations.GetLastTimestamp(_testTableName, CancellationToken.None);
+        var timestamp1 = await _operations.GetLastVersion(_testTableName, CancellationToken.None);
         _output.WriteLine($"Initial timestamp: {timestamp1}");
 
         // Make some changes
         await MakeChangesToTable(_testTableName);
 
         // Act
-        var timestamp2 = await _operations.GetLastTimestamp(_testTableName, CancellationToken.None);
+        var timestamp2 = await _operations.GetLastVersion(_testTableName, CancellationToken.None);
         _output.WriteLine($"After changes timestamp: {timestamp2}");
 
         // Assert
-        Assert.True(timestamp2 > DateTimeOffset.MinValue);
+        Assert.True(timestamp2 > DateTimeOffset.MinValue.Ticks);
         // The timestamp should be more recent after changes
         // Note: Since we're converting versions to timestamps, this might not always hold
         // depending on the conversion logic
@@ -344,30 +344,30 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
         await MakeChangesToTable2(_testTableName2);
 
         var keys = ImmutableArray.Create(_testTableName, _testTableName2);
-        var timestamps = new DateTimeOffset[keys.Length];
+        var versions = new long[keys.Length];
 
         // Act
-        await _operations.GetLastTimestamps(keys, timestamps, CancellationToken.None);
+        await _operations.GetLastVersions(keys, versions, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, timestamps.Length);
-        Assert.True(timestamps[0] > DateTimeOffset.MinValue);
-        Assert.True(timestamps[1] > DateTimeOffset.MinValue);
+        Assert.Equal(2, versions.Length);
+        Assert.True(versions[0] > DateTimeOffset.MinValue.Ticks);
+        Assert.True(versions[1] > DateTimeOffset.MinValue.Ticks);
 
-        _output.WriteLine($"Table {_testTableName} timestamp: {timestamps[0]}");
-        _output.WriteLine($"Table {_testTableName2} timestamp: {timestamps[1]}");
+        _output.WriteLine($"Table {_testTableName} timestamp: {versions[0]}");
+        _output.WriteLine($"Table {_testTableName2} timestamp: {versions[1]}");
     }
 
     [Fact]
-    public async Task GetLastTimestamps_WithSmallArray_ThrowsArgumentException()
+    public async Task GetLastVersions_WithSmallArray_ThrowsArgumentException()
     {
         // Arrange
         var keys = ImmutableArray.Create(_testTableName, _testTableName2);
-        var timestamps = new DateTimeOffset[1]; // Smaller than keys count
+        var versions = new long[1]; // Smaller than keys count
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await _operations.GetLastTimestamps(keys, timestamps, CancellationToken.None));
+            await _operations.GetLastVersions(keys, versions, CancellationToken.None));
     }
 
     [Fact]
@@ -379,59 +379,7 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _operations.SetLastTimestamp(_testTableName, timestamp, CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task GetCurrentVersion_ReturnsValidVersion()
-    {
-        // Arrange
-        await _operations.EnableTracking(_testTableName, CancellationToken.None);
-
-        // Get initial version
-        var version1 = await _operations.GetCurrentVersion(CancellationToken.None);
-        _output.WriteLine($"Initial version: {version1}");
-
-        // Make changes to increment version
-        await MakeChangesToTable(_testTableName);
-
-        // Act
-        var version2 = await _operations.GetCurrentVersion(CancellationToken.None);
-        _output.WriteLine($"After changes version: {version2}");
-
-        // Assert
-        Assert.True(version2 >= 0);
-        Assert.True(version2 >= version1);
-    }
-
-    [Fact]
-    public async Task GetMinValidVersion_ForEnabledTable_ReturnsValidVersion()
-    {
-        // Arrange
-        await _operations.EnableTracking(_testTableName, CancellationToken.None);
-
-        // Make some changes to establish a baseline
-        await MakeChangesToTable(_testTableName);
-
-        // Act
-        var minVersion = await _operations.GetMinValidVersion(_testTableName, CancellationToken.None);
-
-        // Assert
-        Assert.True(minVersion >= 0);
-        _output.WriteLine($"Min valid version for {_testTableName}: {minVersion}");
-    }
-
-    [Fact]
-    public async Task GetMinValidVersion_ForDisabledTable_ReturnsZero()
-    {
-        // Arrange
-        // Table exists but tracking is not enabled
-
-        // Act
-        var minVersion = await _operations.GetMinValidVersion(_testTableName, CancellationToken.None);
-
-        // Assert
-        Assert.Equal(0, minVersion);
+            await _operations.SetLastVersion(_testTableName, timestamp.Ticks, CancellationToken.None));
     }
 
     [Fact]
@@ -468,11 +416,11 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
             Assert.True(isTracking2);
 
             // Both should be able to get timestamps
-            var timestamp1 = await operations1.GetLastTimestamp(_testTableName, CancellationToken.None);
-            var timestamp2 = await operations2.GetLastTimestamp(_testTableName2, CancellationToken.None);
+            var timestamp1 = await operations1.GetLastVersion(_testTableName, CancellationToken.None);
+            var timestamp2 = await operations2.GetLastVersion(_testTableName2, CancellationToken.None);
 
-            Assert.True(timestamp1 > DateTimeOffset.MinValue);
-            Assert.True(timestamp2 > DateTimeOffset.MinValue);
+            Assert.True(timestamp1 > DateTimeOffset.MinValue.Ticks);
+            Assert.True(timestamp2 > DateTimeOffset.MinValue.Ticks);
         }
         finally
         {

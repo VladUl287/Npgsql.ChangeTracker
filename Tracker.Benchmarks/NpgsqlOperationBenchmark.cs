@@ -10,8 +10,8 @@ public class NpgsqlOperationBenchmark
     private const string _tableName = "roles";
 
     [Benchmark]
-    public ValueTask<DateTimeOffset> GetRolesTimestamp()
+    public ValueTask<long> GetRolesTimestamp()
     {
-        return _npgsqlOperations.GetLastTimestamp(_tableName, default);
+        return _npgsqlOperations.GetLastVersion(_tableName, default);
     }
 }

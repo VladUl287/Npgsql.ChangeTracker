@@ -2,5 +2,5 @@
 
 public interface ITimestampsHasher
 {
-    ulong Hash(ReadOnlySpan<DateTimeOffset> timestamps);
+    ulong Hash(ReadOnlySpan<long> timestamps);
 }
