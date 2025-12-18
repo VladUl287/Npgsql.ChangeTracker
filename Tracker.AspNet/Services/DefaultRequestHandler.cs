@@ -8,10 +8,6 @@ using Tracker.Core.Services.Contracts;
 
 namespace Tracker.AspNet.Services;
 
-/// <summary>
-/// Basic implementation of <see cref="IRequestHandler"/> which determines if the requested data has not been modified, 
-/// allowing a 304 Not Modified status code to be returned.
-/// </summary>
 public sealed class DefaultRequestHandler(
     IETagProvider eTagService, ISourceOperationsResolver operationsResolver, ITrackerHasher timestampsHasher,
     ILogger<DefaultRequestHandler> logger) : IRequestHandler
@@ -31,15 +27,9 @@ public sealed class DefaultRequestHandler(
 
             var lastTimestamp = await GetLastVersionAsync(options, operationProvider);
 
-            var ifNoneMatch = ctx.Request.Headers.IfNoneMatch.Count > 0 ? ctx.Request.Headers.IfNoneMatch[0] : null;
-
-            var suffix = options.Suffix(ctx);
-            if (ifNoneMatch is not null && eTagService.Compare(ifNoneMatch, lastTimestamp, suffix))
-            {
-                ctx.Response.StatusCode = StatusCodes.Status304NotModified;
-                logger.LogNotModified(traceId, ifNoneMatch);
+            var notModified = NotModified(ctx, options, traceId, lastTimestamp, out var suffix);
+            if (notModified)
                 return true;
-            }
 
             var etag = eTagService.Generate(lastTimestamp, suffix);
             ctx.Response.Headers.CacheControl = options.CacheControl;
@@ -51,6 +41,26 @@ public sealed class DefaultRequestHandler(
         {
             logger.LogRequestHandleFinished(traceId);
         }
+    }
+
+    private bool NotModified(HttpContext ctx, ImmutableGlobalOptions options, TraceId traceId, ulong lastTimestamp, out string suffix)
+    {
+        suffix = string.Empty;
+
+        if (ctx.Request.Headers.IfNoneMatch.Count == 0)
+            return false;
+
+        var ifNoneMatch = ctx.Request.Headers.IfNoneMatch[0];
+        if (ifNoneMatch is null)
+            return false;
+
+        suffix = options.Suffix(ctx);
+        if (!eTagService.Compare(ifNoneMatch, lastTimestamp, suffix))
+            return false;
+
+        ctx.Response.StatusCode = StatusCodes.Status304NotModified;
+        logger.LogNotModified(traceId, ifNoneMatch);
+        return true;
     }
 
     private async ValueTask<ulong> GetLastVersionAsync(ImmutableGlobalOptions options, ISourceOperations sourceOperations)
