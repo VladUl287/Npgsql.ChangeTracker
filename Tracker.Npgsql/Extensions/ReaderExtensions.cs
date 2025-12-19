@@ -1,4 +1,5 @@
-﻿using System.Data.Common;
+﻿using Npgsql;
+using System.Data.Common;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Tracker.Npgsql.Tests")]
@@ -33,6 +34,10 @@ internal static class ReaderExtensions
     /// <exception cref="IndexOutOfRangeException">
     /// Thrown when the specified ordinal is out of range.
     /// </exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static long GetTimestampTicks(this NpgsqlDataReader reader, int ordinal) =>
+        reader.GetInt64(ordinal) * 10 + PostgresTimestampOffsetTicks;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static long GetTimestampTicks(this DbDataReader reader, int ordinal) =>
         reader.GetInt64(ordinal) * 10 + PostgresTimestampOffsetTicks;
