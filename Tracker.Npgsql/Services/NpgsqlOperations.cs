@@ -76,6 +76,7 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
             await reader.GetFieldValueAsync<bool>(0, token);
     }
 
+    //TODO: Fix unpredictable result not existing table name(maybe error message bytes pased?)
     public async ValueTask<long> GetLastVersion(string key, CancellationToken token = default)
     {
         const string GetTimestampQuery = "SELECT get_last_timestamp(@table_name);";
