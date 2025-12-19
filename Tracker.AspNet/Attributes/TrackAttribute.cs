@@ -2,8 +2,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using Tracker.AspNet.Logging;
 using Tracker.AspNet.Models;
+
+[assembly: InternalsVisibleTo("Tracker.AspNet.Tests")]
 
 namespace Tracker.AspNet.Attributes;
 
@@ -16,7 +19,7 @@ public sealed class TrackAttribute(
     private ImmutableGlobalOptions? _actionOptions;
     private readonly Lock _lock = new();
 
-    protected override ImmutableGlobalOptions GetOptions(ActionExecutingContext ctx)
+    protected internal override ImmutableGlobalOptions GetOptions(ActionExecutingContext ctx)
     {
         if (_actionOptions is not null)
             return _actionOptions;

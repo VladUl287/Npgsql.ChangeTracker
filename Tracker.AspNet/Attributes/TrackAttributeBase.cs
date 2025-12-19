@@ -31,5 +31,5 @@ public abstract class TrackAttributeBase : Attribute, IAsyncActionFilter
             .GetRequiredService<IRequestHandler>()
             .IsNotModified(httpCtx, options);
 
-    protected abstract ImmutableGlobalOptions GetOptions(ActionExecutingContext execContext);
+    protected internal abstract ImmutableGlobalOptions GetOptions(ActionExecutingContext execContext);
 }
