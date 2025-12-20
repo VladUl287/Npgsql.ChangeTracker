@@ -79,11 +79,65 @@ public class NpgsqlOperationsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task EnableTracking_Table_TwoTimes_ReturnsTrue()
+    {
+        // Act
+        var result = await _operations.EnableTracking(_testTableName);
+        var result1 = await _operations.EnableTracking(_testTableName);
+
+        // Assert
+        Assert.True(result);
+        Assert.True(result1);
+    }
+
+    [Fact]
     public async Task EnableTracking_NullKey_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(async () =>
             await _operations.EnableTracking(null));
+    }
+
+    [Fact]
+    public async Task EnableTracking_NotExistingDatabase_ThrowsException()
+    {
+        // Arrange
+        using var operations = new NpgsqlOperations("non-existing-db-source", TestConfiguration.GetSqlNonExistingDatabaseConnectionString());
+
+        // Act & Assert
+        await Assert.ThrowsAsync<PostgresException>(async () =>
+            await operations.EnableTracking(_testTableName));
+    }
+
+    [Fact]
+    public async Task EnableTracking_NotExistingTable_ThrowsException()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<PostgresException>(async () =>
+            await _operations.EnableTracking(_testTableName + Guid.NewGuid().ToString("N")));
+    }
+
+    [Fact]
+    public async Task EnableTracking_NotExistingExtensions_ThrowsException()
+    {
+        //Arrange
+        var databaseName = "empty_database";
+        var connectionString = TestConfiguration.GetGenericDatabaseConnectionString(databaseName);
+
+        await SqlHelpers.CreateDatabase(_connectionString, databaseName);
+
+        using var emptyDbOperations = new NpgsqlOperations(databaseName, connectionString);
+        try
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<PostgresException>(async () =>
+                await emptyDbOperations.EnableTracking(_testTableName));
+        }
+        finally
+        {
+            emptyDbOperations.Dispose();
+            await SqlHelpers.DropDatabase(_connectionString, databaseName);
+        }
     }
 
     [Fact]

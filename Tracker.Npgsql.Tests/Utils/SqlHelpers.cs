@@ -1,4 +1,5 @@
-﻿using Npgsql;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Npgsql;
 
 namespace Tracker.Npgsql.Tests.Utils;
 
@@ -28,17 +29,24 @@ internal static class SqlHelpers
         await createTableCmd.ExecuteNonQueryAsync();
     }
 
-    internal static async Task CreateDatabaseIfNotExists(string connectionString, string databaseName)
+    internal static async Task CreateDatabase(string connectionString, string databaseName)
     {
-        using var masterDataSource = new NpgsqlDataSourceBuilder(connectionString).Build();
+        try { await DropDatabase(connectionString, databaseName); }
+        catch { }
 
-        using var checkCmd = masterDataSource.CreateCommand($"SELECT 1 FROM pg_database WHERE datname = '{databaseName}'");
+        using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
 
-        var exists = await checkCmd.ExecuteScalarAsync();
-        if (exists is null)
-        {
-            using var createCmd = masterDataSource.CreateCommand($"CREATE DATABASE {databaseName}");
-            await createCmd.ExecuteNonQueryAsync();
-        }
+        using var createDatabaseCommand = new NpgsqlCommand($"CREATE DATABASE {databaseName}", connection);
+        await createDatabaseCommand.ExecuteNonQueryAsync();
+    }
+
+    internal static async Task DropDatabase(string connectionString, string databaseName)
+    {
+        using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        using var dropDatabaseCommand = new NpgsqlCommand($"DROP DATABASE IF EXISTS {databaseName}", connection);
+        await dropDatabaseCommand.ExecuteNonQueryAsync();
     }
 }
