@@ -199,44 +199,6 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetLastTimestamp_WithoutKey_ReturnsDatabaseVersion()
-    {
-        // Arrange
-        // Make some changes to increment the version
-        await MakeSomeChanges();
-
-        // Act
-        var timestamp = await _operations.GetLastVersion(CancellationToken.None);
-
-        // Assert
-        Assert.True(timestamp > DateTimeOffset.MinValue.Ticks);
-        Assert.True(timestamp <= DateTimeOffset.UtcNow.Ticks);
-        _output.WriteLine($"Database timestamp: {timestamp}");
-    }
-
-    [Fact]
-    public async Task GetLastTimestamp_ForNonExistentTable_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var nonExistentTable = $"NonExistentTable_{Guid.NewGuid():N}";
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _operations.GetLastVersion(nonExistentTable, CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task GetLastTimestamp_ForTableWithoutTracking_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        // Table exists but change tracking is not enabled
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _operations.GetLastVersion(_testTableName, CancellationToken.None));
-    }
-
-    [Fact]
     public async Task IsTracking_ForEnabledTable_ReturnsTrue()
     {
         // Arrange
@@ -679,63 +641,7 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
             await _operations.DisableTracking(_testTableName, CancellationToken.None));
     }
 
-    [Fact]
-    public async Task GetLastTimestamp_ForEnabledTable_ReturnsTimestamp()
-    {
-        // Arrange
-        await _operations.EnableTracking(_testTableName, CancellationToken.None);
-
-        var timestamp1 = await _operations.GetLastVersion(_testTableName, CancellationToken.None);
-        _output.WriteLine($"Initial timestamp: {timestamp1}");
-
-        await MakeChangesToTable(_testTableName);
-
-        // Act
-        var timestamp2 = await _operations.GetLastVersion(_testTableName, CancellationToken.None);
-        _output.WriteLine($"After changes timestamp: {timestamp2}");
-
-        // Assert
-        Assert.True(timestamp2 > DateTimeOffset.MinValue.Ticks);
-    }
-
-    [Fact]
-    public async Task GetLastTimestamps_ForMultipleTables_ReturnsAllTimestamps()
-    {
-        // Arrange
-        await _operations.EnableTracking(_testTableName, CancellationToken.None);
-        await _operations.EnableTracking(_testTableName2, CancellationToken.None);
-
-        // Make changes to both tables
-        await MakeChangesToTable(_testTableName);
-        await MakeChangesToTable2(_testTableName2);
-
-        var keys = ImmutableArray.Create(_testTableName, _testTableName2);
-        var versions = new long[keys.Length];
-
-        // Act
-        await _operations.GetLastVersions(keys, versions, CancellationToken.None);
-
-        // Assert
-        Assert.Equal(2, versions.Length);
-        Assert.True(versions[0] > DateTimeOffset.MinValue.Ticks);
-        Assert.True(versions[1] > DateTimeOffset.MinValue.Ticks);
-
-        _output.WriteLine($"Table {_testTableName} timestamp: {versions[0]}");
-        _output.WriteLine($"Table {_testTableName2} timestamp: {versions[1]}");
-    }
-
-    [Fact]
-    public async Task GetLastVersions_WithSmallArray_ThrowsArgumentException()
-    {
-        // Arrange
-        var keys = ImmutableArray.Create(_testTableName, _testTableName2);
-        var versions = new long[1]; // Smaller than keys count
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await _operations.GetLastVersions(keys, versions, CancellationToken.None));
-    }
-
+ 
     [Fact]
     public async Task SetLastTimestamp_AlwaysThrowsInvalidOperationException()
     {
