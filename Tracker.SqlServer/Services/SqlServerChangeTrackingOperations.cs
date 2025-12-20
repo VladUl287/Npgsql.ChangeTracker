@@ -40,19 +40,12 @@ public sealed class SqlServerChangeTrackingOperations : ISourceOperations, IDisp
 
         await using var command = _dataSource.CreateCommand(getLastVersionQuery);
 
-        try
-        {
-            await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
+        await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
 
-            if (await reader.ReadAsync(token))
-                return reader.GetInt64(0);
+        if (await reader.ReadAsync(token))
+            return reader.GetInt64(0);
 
-            throw new InvalidOperationException("Unable to get last version for table");
-        }
-        catch (SqlException ex)
-        {
-            throw new InvalidOperationException(ex.Message);
-        }
+        throw new InvalidOperationException("Unable to get last version for table");
     }
 
     public async ValueTask GetLastVersions(ImmutableArray<string> keys, long[] versions, CancellationToken token = default)
