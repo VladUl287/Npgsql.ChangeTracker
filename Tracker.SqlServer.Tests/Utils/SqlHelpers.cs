@@ -220,4 +220,29 @@ internal static class SqlHelpers
         using var dropCommand = new SqlCommand(dropTable, connection);
         await dropCommand.ExecuteNonQueryAsync();
     }
+
+    internal static async Task DeleteAllTestTables(string connectionString)
+    {
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        var getTestTablesQuery = @"SELECT ""name"" FROM sys.tables WHERE ""name"" LIKE 'TestTable%'";
+
+        var testTables = new List<string>();
+
+        using (var command = new SqlCommand(getTestTablesQuery, connection))
+        using (var reader = await command.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+                testTables.Add(reader.GetString(0));
+        }
+
+        foreach (var tableName in testTables)
+        {
+            var disableTableQuery = $"DROP TABLE IF EXISTS {tableName}";
+
+            using var disableCommand = new SqlCommand(disableTableQuery, connection);
+            await disableCommand.ExecuteNonQueryAsync();
+        }
+    }
 }
