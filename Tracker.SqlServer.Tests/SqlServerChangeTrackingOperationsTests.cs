@@ -314,16 +314,19 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DisableTracking_WhenTableExistsButChangeTrackingNotEnabled_ReturnsFalse()
+    public async Task DisableTracking_WhenTableExistsButChangeTrackingNotEnabled_ThrowsException()
     {
         // Arrange - Ensure change tracking is NOT enabled for the table
-        await _operations.DisableTracking(_testTableName);
+        try
+        {
+            await _operations.DisableTracking(_testTableName);
+        }
+        catch
+        {}
 
         // Act
-        var result = await _operations.DisableTracking(_testTableName);
-
         // Assert
-        Assert.False(result);
+        await Assert.ThrowsAsync<SqlException>(async () => await _operations.DisableTracking(_testTableName));
     }
 
     [Fact]
@@ -332,11 +335,8 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
         // Arrange
         var nonExistentTable = "NonExistentTable_" + Guid.NewGuid().ToString("N");
 
-        //Act
-        var result = await _operations.DisableTracking(nonExistentTable);
-
         // Act & Assert
-        Assert.False(result);
+        await Assert.ThrowsAsync<SqlException>(async () => await _operations.DisableTracking(nonExistentTable));
     }
 
     [Fact]
@@ -375,18 +375,9 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
     [Fact]
     public async Task DisableTracking_WhenCalledAfterTableDropped_ThrowsException()
     {
-        // Arrange
-        await _operations.EnableTracking(_testTableName);
-
-        // Drop table while change tracking is enabled
-        await DropTestTables();
-
-        // Recreate table WITHOUT change tracking
-        await CreateTestTables();
-
         // Act & Assert - Should throw because table doesn't have change tracking
-        var result = await _operations.DisableTracking(_testTableName);
-        Assert.False(result);
+        await Assert.ThrowsAsync<SqlException>(async () => 
+            await _operations.DisableTracking(_testTableName));
     }
 
     [Fact]
@@ -407,9 +398,8 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
     {
         await _operations.EnableTracking(_testTableName);
 
-        var result = await _lowPrivilageOperations.DisableTracking(_testTableName);
-
-        Assert.False(result);
+        await Assert.ThrowsAsync<SqlException>(async () => 
+            await _lowPrivilageOperations.DisableTracking(_testTableName));
     }
 
     [Fact]
@@ -435,10 +425,9 @@ public class SqlServerChangeTrackingOperationsTests : IAsyncLifetime
         // Table exists but tracking is not enabled
 
         // Act
-        var result = await _operations.DisableTracking(_testTableName, CancellationToken.None);
-
         // Assert
-        Assert.False(result);
+        await Assert.ThrowsAsync<SqlException>(async () =>
+            await _operations.DisableTracking(_testTableName, CancellationToken.None));
     }
 
     [Fact]

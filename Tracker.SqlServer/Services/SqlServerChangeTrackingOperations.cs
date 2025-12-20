@@ -101,46 +101,24 @@ public sealed class SqlServerChangeTrackingOperations : ISourceOperations, IDisp
     {
         ArgumentException.ThrowIfNullOrEmpty(key, nameof(key));
 
-        string enableTrackingQuery = $"""
-            IF NOT EXISTS (SELECT 1 FROM sys.change_tracking_tables WHERE object_id = OBJECT_ID('{key}'))
-            BEGIN
-                ALTER TABLE {key} ENABLE CHANGE_TRACKING WITH (TRACK_COLUMNS_UPDATED = ON);
-                SELECT 1;
-            END
-            ELSE
-                SELECT 0;
-            """;
+        string enableTrackingQuery = $"ALTER TABLE {key} ENABLE CHANGE_TRACKING WITH (TRACK_COLUMNS_UPDATED = ON);";
 
         await using var command = _dataSource.CreateCommand(enableTrackingQuery);
 
-        await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
-        if (await reader.ReadAsync(token))
-            return reader.GetInt32(0) > 0;
-
-        throw new InvalidOperationException("Unable to enable change tracking for table.");
+        await command.ExecuteNonQueryAsync(token);
+        return true;
     }
 
     public async ValueTask<bool> DisableTracking(string key, CancellationToken token = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(key, nameof(key));
 
-        string disableTrackingQuery = $"""
-            IF EXISTS (SELECT 1 FROM sys.change_tracking_tables WHERE object_id = OBJECT_ID('{key}'))
-            BEGIN
-                ALTER TABLE {key} DISABLE CHANGE_TRACKING;
-                SELECT 1;
-            END
-            ELSE
-                SELECT 0;
-            """;
+        string disableTrackingQuery = $"ALTER TABLE {key} DISABLE CHANGE_TRACKING;";
 
         await using var command = _dataSource.CreateCommand(disableTrackingQuery);
 
-        await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
-        if (await reader.ReadAsync(token))
-            return reader.GetInt32(0) > 0;
-
-        throw new InvalidOperationException("Unable to disable change tracking for table.");
+        await command.ExecuteNonQueryAsync(token);
+        return true;
     }
 
     public ValueTask<bool> SetLastVersion(string key, long version, CancellationToken token = default) =>
