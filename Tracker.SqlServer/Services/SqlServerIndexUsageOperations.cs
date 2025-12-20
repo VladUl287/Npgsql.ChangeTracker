@@ -32,7 +32,7 @@ public sealed class SqlServerIndexUsageOperations : ISourceOperations, IDisposab
 
     public string SourceId => _sourceId;
 
-    public ValueTask<long> GetLastVersion(string key, CancellationToken token = default)
+    public async ValueTask<long> GetLastVersion(string key, CancellationToken token = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(key, nameof(key));
 
@@ -50,13 +50,11 @@ public sealed class SqlServerIndexUsageOperations : ISourceOperations, IDisposab
         parameter.DbType = DbType.String;
         command.Parameters.Add(parameter);
 
-        using var reader = command.ExecuteReader(CommandBehavior.SingleRow);
-        if (reader.Read())
+        using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
+        if (await reader.ReadAsync(token))
         {
-            var timestamp = reader.GetFieldValue<DateTimeOffset?>(0) ??
-                throw new InvalidOperationException($"Unable to retrieve timestamp for table '{key}'. No index usage data found.");
-
-            return new ValueTask<long>(timestamp.Ticks);
+            var timestamp = await reader.GetFieldValueAsync<DateTimeOffset?>(0) ?? default;
+            return timestamp.Ticks;
         }
         throw new InvalidOperationException($"Table '{key}' not found or has no index usage statistics.");
     }
@@ -70,7 +68,7 @@ public sealed class SqlServerIndexUsageOperations : ISourceOperations, IDisposab
             versions[i] = await GetLastVersion(keys[i], token);
     }
 
-    public ValueTask<long> GetLastVersion(CancellationToken token = default)
+    public async ValueTask<long> GetLastVersion(CancellationToken token = default)
     {
         const string query = $"""
             SELECT MAX(last_user_update)
@@ -80,13 +78,11 @@ public sealed class SqlServerIndexUsageOperations : ISourceOperations, IDisposab
 
         using var command = _dataSource.CreateCommand(query);
 
-        using var reader = command.ExecuteReader(CommandBehavior.SingleRow);
-        if (reader.Read())
+        using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
+        if (await reader.ReadAsync(token))
         {
-            var timestamp = reader.GetFieldValue<long?>(0) ??
-                throw new InvalidOperationException("Unable to retrieve timestamp for database. No index usage data found.");
-
-            return new ValueTask<long>(timestamp);
+            var versioin = await reader.GetFieldValueAsync<long?>(0) ?? default;
+            return versioin;
         }
 
         throw new InvalidOperationException("Unable to retrieve timestamp for database.");
