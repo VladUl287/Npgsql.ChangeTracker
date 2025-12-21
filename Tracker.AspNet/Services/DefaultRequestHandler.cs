@@ -25,7 +25,7 @@ public sealed class DefaultRequestHandler(
             var operationProvider = GetOperationsProvider(ctx, options);
             logger.LogSourceProviderResolved(traceId, operationProvider.SourceId);
 
-            var lastTimestamp = await GetLastVersionAsync(options, operationProvider);
+            var lastTimestamp = await GetLastVersionAsync(options, operationProvider, token);
 
             var notModified = NotModified(ctx, options, traceId, lastTimestamp, out var suffix);
             if (notModified)
@@ -63,20 +63,20 @@ public sealed class DefaultRequestHandler(
         return true;
     }
 
-    private async ValueTask<ulong> GetLastVersionAsync(ImmutableGlobalOptions options, ISourceOperations sourceOperations)
+    private async ValueTask<ulong> GetLastVersionAsync(ImmutableGlobalOptions options, ISourceOperations sourceOperations, CancellationToken token)
     {
         switch (options.Tables.Length)
         {
             case 0:
-                var timestamp = await sourceOperations.GetLastVersion(default);
+                var timestamp = await sourceOperations.GetLastVersion(token);
                 return (ulong)timestamp;
             case 1:
                 var tableName = options.Tables[0];
-                var singleTableTimestamp = await sourceOperations.GetLastVersion(tableName, default);
+                var singleTableTimestamp = await sourceOperations.GetLastVersion(tableName, token);
                 return (ulong)singleTableTimestamp;
             default:
                 var timestamps = ArrayPool<long>.Shared.Rent(options.Tables.Length);
-                await sourceOperations.GetLastVersions(options.Tables, timestamps, default);
+                await sourceOperations.GetLastVersions(options.Tables, timestamps, token);
                 var hash = timestampsHasher.Hash(timestamps.AsSpan(0, options.Tables.Length));
                 ArrayPool<long>.Shared.Return(timestamps);
                 return hash;
