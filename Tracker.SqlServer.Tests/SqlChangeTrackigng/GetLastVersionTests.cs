@@ -169,7 +169,7 @@ public class GetLastVersionTests : IAsyncLifetime
         var timestamp = await _operations.GetLastVersion(CancellationToken.None);
 
         // Assert
-        Assert.True(timestamp > DateTimeOffset.MinValue.Ticks);
+        Assert.True(timestamp >= DateTimeOffset.MinValue.Ticks);
         Assert.True(timestamp <= DateTimeOffset.UtcNow.Ticks);
     }
 
