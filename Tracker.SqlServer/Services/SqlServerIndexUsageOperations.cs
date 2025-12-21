@@ -53,7 +53,7 @@ public sealed class SqlServerIndexUsageOperations : ISourceOperations, IDisposab
         using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, token);
         if (await reader.ReadAsync(token))
         {
-            var timestamp = await reader.GetFieldValueAsync<DateTimeOffset?>(0) ?? default;
+            var timestamp = await reader.GetFieldValueAsync<DateTime?>(0) ?? default;
             return timestamp.Ticks;
         }
         throw new InvalidOperationException($"Table '{key}' not found or has no index usage statistics.");
