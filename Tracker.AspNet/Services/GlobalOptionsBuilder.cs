@@ -41,7 +41,7 @@ public sealed class GlobalOptionsBuilder(IServiceScopeFactory scopeFactory) : IO
         using var scope = scopeFactory.CreateScope();
 
         var dbContext = scope.ServiceProvider.GetRequiredService<TContext>();
-        var sourceIdGenerator = scope.ServiceProvider.GetRequiredService<ISourceIdGenerator>();
+        var sourceIdGenerator = scope.ServiceProvider.GetRequiredService<IProviderIdGenerator>();
         var providerSelector = scope.ServiceProvider.GetRequiredService<IProviderResolver>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<GlobalOptionsBuilder>>();
 

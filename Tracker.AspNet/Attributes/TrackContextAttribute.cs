@@ -38,7 +38,7 @@ public sealed class TrackAttribute<TContext>(
 
             var options = serviceProvider.GetRequiredService<ImmutableGlobalOptions>();
             var sourceResolver = serviceProvider.GetRequiredService<IProviderResolver>();
-            var sourceIdGenerator = serviceProvider.GetRequiredService<ISourceIdGenerator>();
+            var sourceIdGenerator = serviceProvider.GetRequiredService<IProviderIdGenerator>();
             var logger = serviceProvider.GetRequiredService<ILogger<TrackAttribute<TContext>>>();
 
             var sourceOperations = sourceResolver.SelectProvider<TContext>(sourceId, options);

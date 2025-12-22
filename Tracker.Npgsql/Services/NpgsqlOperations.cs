@@ -6,7 +6,7 @@ using Tracker.Npgsql.Extensions;
 
 namespace Tracker.Npgsql.Services;
 
-public sealed class NpgsqlOperations : ISourceOperations, IDisposable
+public sealed class NpgsqlOperations : ISourceProvider, IDisposable
 {
     private readonly string _sourceId;
     private readonly NpgsqlDataSource _dataSource;
@@ -33,7 +33,7 @@ public sealed class NpgsqlOperations : ISourceOperations, IDisposable
         _dataSource = new NpgsqlDataSourceBuilder(connectionString).Build();
     }
 
-    public string SourceId => _sourceId;
+    public string Id => _sourceId;
 
     public async ValueTask<bool> EnableTracking(string key, CancellationToken token = default)
     {

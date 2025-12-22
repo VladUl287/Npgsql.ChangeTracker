@@ -8,8 +8,8 @@ namespace Tracker.AspNet.Models;
 public sealed class GlobalOptions
 {
     public string? Source { get; set; }
-    public ISourceOperations? SourceOperations { get; set; }
-    public Func<HttpContext, ISourceOperations>? SourceOperationsFactory { get; set; }
+    public ISourceProvider? SourceOperations { get; set; }
+    public Func<HttpContext, ISourceProvider>? SourceOperationsFactory { get; set; }
 
     public Func<HttpContext, bool> Filter { get; set; } = (_) => true;
     public HashSet<string> InvalidResponseDirectives { get; init; } = ["no-transform", "no-store", "immutable"];
@@ -26,8 +26,8 @@ public sealed class GlobalOptions
 
 public sealed record ImmutableGlobalOptions
 {
-    public ISourceOperations? SourceOperations { get; init; }
-    public Func<HttpContext, ISourceOperations>? SourceOperationsFactory { get; init; }
+    public ISourceProvider? SourceOperations { get; init; }
+    public Func<HttpContext, ISourceProvider>? SourceOperationsFactory { get; init; }
 
     public Func<HttpContext, bool> Filter { get; init; } = (_) => true;
     public ImmutableArray<string> InvalidResponseDirectives { get; init; } = [];

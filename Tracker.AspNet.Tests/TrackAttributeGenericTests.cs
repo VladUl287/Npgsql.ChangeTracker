@@ -24,7 +24,7 @@ public class TrackAttributeGenericTests
     private readonly Mock<IRequestFilter> _requestFilterMock;
     private readonly Mock<IRequestHandler> _requestHandlerMock;
     private readonly Mock<ISourceOperationsResolver> _sourceResolverMock;
-    private readonly Mock<ISourceIdGenerator> _sourceIdGeneratorMock;
+    private readonly Mock<IProviderIdGenerator> _sourceIdGeneratorMock;
     private readonly Mock<ILogger<TrackAttribute<TestDbContext>>> _loggerMock;
     private readonly Mock<TestDbContext> _dbContextMock;
     private readonly ImmutableGlobalOptions _defaultOptions;
@@ -40,7 +40,7 @@ public class TrackAttributeGenericTests
         _requestFilterMock = new Mock<IRequestFilter>();
         _requestHandlerMock = new Mock<IRequestHandler>();
         _sourceResolverMock = new Mock<ISourceOperationsResolver>();
-        _sourceIdGeneratorMock = new Mock<ISourceIdGenerator>();
+        _sourceIdGeneratorMock = new Mock<IProviderIdGenerator>();
         _loggerMock = new Mock<ILogger<TrackAttribute<TestDbContext>>>();
         _dbContextMock = new Mock<TestDbContext>();
 
@@ -418,7 +418,7 @@ public class TrackAttributeGenericTests
             .Returns(_defaultOptions);
         _scopedServiceProviderMock.Setup(x => x.GetService(typeof(ISourceOperationsResolver)))
             .Returns(_sourceResolverMock.Object);
-        _scopedServiceProviderMock.Setup(x => x.GetService(typeof(ISourceIdGenerator)))
+        _scopedServiceProviderMock.Setup(x => x.GetService(typeof(IProviderIdGenerator)))
             .Returns(_sourceIdGeneratorMock.Object);
         _scopedServiceProviderMock.Setup(x => x.GetService(typeof(ILogger<TrackAttribute<TestDbContext>>)))
             .Returns(_loggerMock.Object);

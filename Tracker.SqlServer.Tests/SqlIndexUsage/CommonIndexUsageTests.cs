@@ -46,7 +46,7 @@ public class CommonIndexUsageTests : IAsyncLifetime
 
         // Assert
         Assert.NotNull(operations);
-        Assert.Equal("test-source", operations.SourceId);
+        Assert.Equal("test-source", operations.Id);
 
         operations.Dispose();
     }
@@ -59,7 +59,7 @@ public class CommonIndexUsageTests : IAsyncLifetime
 
         // Assert
         Assert.NotNull(operations);
-        Assert.Equal("test-source", operations.SourceId);
+        Assert.Equal("test-source", operations.Id);
 
         operations.Dispose();
     }
@@ -91,7 +91,7 @@ public class CommonIndexUsageTests : IAsyncLifetime
     public void SourceId_ReturnsCorrectValue()
     {
         // Arrange & Act & Assert
-        Assert.Equal("test-source", _operations.SourceId);
+        Assert.Equal("test-source", _operations.Id);
     }
 
     [Fact]

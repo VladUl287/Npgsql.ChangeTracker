@@ -5,7 +5,7 @@ namespace Tracker.Core.Services.Contracts;
 /// <summary>
 /// Interface for generating source identifiers in Entity Framework Core applications.
 /// </summary>
-public interface ISourceIdGenerator
+public interface IProviderIdGenerator
 {
     /// <summary>
     /// Generates a unique identifier for a data source.

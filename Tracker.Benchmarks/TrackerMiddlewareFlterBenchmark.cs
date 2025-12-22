@@ -83,9 +83,9 @@ public class TrackerMiddlewareFlterBenchmark
         public DateTimeOffset GetWriteTime() => _timestamp;
     }
 
-    private sealed class BenchmarkOperationsProvider : ISourceOperations
+    private sealed class BenchmarkOperationsProvider : ISourceProvider
     {
-        public string SourceId => "1";
+        public string Id => "1";
 
         public ValueTask<bool> DisableTracking(string key, CancellationToken token = default)
         {

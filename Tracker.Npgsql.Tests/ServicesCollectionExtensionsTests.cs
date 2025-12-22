@@ -22,14 +22,14 @@ public class ServiceCollectionExtensionsTests
 
         SetupMockDbContext(services, "Host=localhost;Database=test");
 
-        services.AddScoped<ISourceIdGenerator>(_ => Mock.Of<ISourceIdGenerator>(g =>
+        services.AddScoped<IProviderIdGenerator>(_ => Mock.Of<IProviderIdGenerator>(g =>
             g.GenerateId<TestDbContext>() == "generated-source-id"));
 
         // Act
-        services.AddNpgsqlSource<TestDbContext>();
+        services.AddNpgsqlProvider<TestDbContext>();
 
         // Assert
-        var descriptor = services.FirstOrDefault(s => s.ServiceType == typeof(ISourceOperations));
+        var descriptor = services.FirstOrDefault(s => s.ServiceType == typeof(ISourceProvider));
         Assert.NotNull(descriptor);
         Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
     }
@@ -44,14 +44,14 @@ public class ServiceCollectionExtensionsTests
 
         SetupMockDbContext(services, expectedConnectionString);
 
-        var mockIdGenerator = new Mock<ISourceIdGenerator>();
+        var mockIdGenerator = new Mock<IProviderIdGenerator>();
         mockIdGenerator.Setup(g => g.GenerateId<TestDbContext>()).Returns(expectedSourceId);
         services.AddScoped(_ => mockIdGenerator.Object);
 
         // Act
-        services.AddNpgsqlSource<TestDbContext>();
+        services.AddNpgsqlProvider<TestDbContext>();
         var provider = services.BuildServiceProvider();
-        var operations = provider.GetRequiredService<ISourceOperations>();
+        var operations = provider.GetRequiredService<ISourceProvider>();
 
         // Assert
         Assert.NotNull(operations);
@@ -66,14 +66,14 @@ public class ServiceCollectionExtensionsTests
 
         SetupMockDbContext(services, (string)null);
 
-        services.AddScoped<ISourceIdGenerator>(_ => Mock.Of<ISourceIdGenerator>());
+        services.AddScoped<IProviderIdGenerator>(_ => Mock.Of<IProviderIdGenerator>());
 
         // Act & Assert
-        services.AddNpgsqlSource<TestDbContext>();
+        services.AddNpgsqlProvider<TestDbContext>();
         var provider = services.BuildServiceProvider();
 
         var exception = Assert.Throws<NullReferenceException>(() =>
-            provider.GetRequiredService<ISourceOperations>());
+            provider.GetRequiredService<ISourceProvider>());
 
         Assert.Contains(typeof(TestDbContext).FullName, exception.Message);
     }
@@ -91,10 +91,10 @@ public class ServiceCollectionExtensionsTests
         SetupMockDbContext(services, "Host=localhost;Database=test");
 
         // Act
-        services.AddNpgsqlSource<TestDbContext>("custom-source-id");
+        services.AddNpgsqlProvider<TestDbContext>("custom-source-id");
 
         // Assert
-        var descriptor = services.FirstOrDefault(s => s.ServiceType == typeof(ISourceOperations));
+        var descriptor = services.FirstOrDefault(s => s.ServiceType == typeof(ISourceProvider));
         Assert.NotNull(descriptor);
         Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
     }
@@ -106,8 +106,8 @@ public class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => services.AddNpgsqlSource<TestDbContext>(null));
-        Assert.Throws<ArgumentException>(() => services.AddNpgsqlSource<TestDbContext>(""));
+        Assert.Throws<ArgumentNullException>(() => services.AddNpgsqlProvider<TestDbContext>(null));
+        Assert.Throws<ArgumentException>(() => services.AddNpgsqlProvider<TestDbContext>(""));
     }
 
     [Fact]
@@ -121,9 +121,9 @@ public class ServiceCollectionExtensionsTests
         SetupMockDbContext(services, expectedConnectionString);
 
         // Act
-        services.AddNpgsqlSource<TestDbContext>(expectedSourceId);
+        services.AddNpgsqlProvider<TestDbContext>(expectedSourceId);
         var provider = services.BuildServiceProvider();
-        var operations = provider.GetRequiredService<ISourceOperations>();
+        var operations = provider.GetRequiredService<ISourceProvider>();
 
         // Assert
         Assert.NotNull(operations);
@@ -141,10 +141,10 @@ public class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
 
         // Act
-        services.AddNpgsqlSource("test-id", "Host=localhost;Database=test");
+        services.AddNpgsqlProvider("test-id", "Host=localhost;Database=test");
 
         // Assert
-        var descriptor = services.FirstOrDefault(s => s.ServiceType == typeof(ISourceOperations));
+        var descriptor = services.FirstOrDefault(s => s.ServiceType == typeof(ISourceProvider));
         Assert.NotNull(descriptor);
         Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
     }
@@ -156,11 +156,11 @@ public class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => services.AddNpgsqlSource(null, "connection-string"));
-        Assert.Throws<ArgumentException>(() => services.AddNpgsqlSource("", "connection-string"));
+        Assert.Throws<ArgumentNullException>(() => services.AddNpgsqlProvider(null, "connection-string"));
+        Assert.Throws<ArgumentException>(() => services.AddNpgsqlProvider("", "connection-string"));
 
-        Assert.Throws<ArgumentNullException>(() => services.AddNpgsqlSource("source-id", (string)null));
-        Assert.Throws<ArgumentException>(() => services.AddNpgsqlSource("source-id", ""));
+        Assert.Throws<ArgumentNullException>(() => services.AddNpgsqlProvider("source-id", (string)null));
+        Assert.Throws<ArgumentException>(() => services.AddNpgsqlProvider("source-id", ""));
     }
 
     [Fact]
@@ -172,9 +172,9 @@ public class ServiceCollectionExtensionsTests
         const string expectedConnectionString = "Host=localhost;Database=test;ApplicationName=Test";
 
         // Act
-        services.AddNpgsqlSource(expectedSourceId, expectedConnectionString);
+        services.AddNpgsqlProvider(expectedSourceId, expectedConnectionString);
         var provider = services.BuildServiceProvider();
-        var operations = provider.GetRequiredService<ISourceOperations>();
+        var operations = provider.GetRequiredService<ISourceProvider>();
 
         // Assert
         Assert.NotNull(operations);
@@ -196,7 +196,7 @@ public class ServiceCollectionExtensionsTests
             builder.ConnectionStringBuilder.ApplicationName = "TestApp");
 
         // Assert
-        var descriptor = services.FirstOrDefault(s => s.ServiceType == typeof(ISourceOperations));
+        var descriptor = services.FirstOrDefault(s => s.ServiceType == typeof(ISourceProvider));
         Assert.NotNull(descriptor);
         Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
     }
@@ -236,7 +236,7 @@ public class ServiceCollectionExtensionsTests
         });
 
         var provider = services.BuildServiceProvider();
-        var operations = provider.GetRequiredService<ISourceOperations>();
+        var operations = provider.GetRequiredService<ISourceProvider>();
 
         // Assert
         Assert.True(wasConfigured);
@@ -260,7 +260,7 @@ public class ServiceCollectionExtensionsTests
         });
 
         var provider = services.BuildServiceProvider();
-        var operations = provider.GetRequiredService<ISourceOperations>();
+        var operations = provider.GetRequiredService<ISourceProvider>();
 
         // Assert
         Assert.NotNull(operations);
@@ -278,11 +278,11 @@ public class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
 
         // Act
-        services.AddNpgsqlSource("first-id", "Host=l;Port=5432;Database=1;Username=1;Password=1");
-        services.AddNpgsqlSource("second-id", "Host=l;Port=5432;Database=2;Username=2;Password=2");
+        services.AddNpgsqlProvider("first-id", "Host=l;Port=5432;Database=1;Username=1;Password=1");
+        services.AddNpgsqlProvider("second-id", "Host=l;Port=5432;Database=2;Username=2;Password=2");
 
         var provider = services.BuildServiceProvider();
-        var operations = provider.GetRequiredService<ISourceOperations>();
+        var operations = provider.GetRequiredService<ISourceProvider>();
 
         // Assert
         Assert.NotNull(operations);
@@ -296,29 +296,29 @@ public class ServiceCollectionExtensionsTests
         // Method 1: With DbContext and ISourceIdGenerator
         var services1 = new ServiceCollection();
         SetupMockDbContext(services1, "Host=l;Port=5432;Database=1;Username=1;Password=1");
-        services1.AddScoped<ISourceIdGenerator>(_ =>
-            Mock.Of<ISourceIdGenerator>(g => g.GenerateId<TestDbContext>() == "id1"));
-        services1.AddNpgsqlSource<TestDbContext>();
+        services1.AddScoped<IProviderIdGenerator>(_ =>
+            Mock.Of<IProviderIdGenerator>(g => g.GenerateId<TestDbContext>() == "id1"));
+        services1.AddNpgsqlProvider<TestDbContext>();
 
         var provider1 = services1.BuildServiceProvider();
-        var ops1 = provider1.GetRequiredService<ISourceOperations>();
+        var ops1 = provider1.GetRequiredService<ISourceProvider>();
         Assert.IsType<NpgsqlOperations>(ops1);
 
         // Method 2: With DbContext and explicit sourceId
         var services2 = new ServiceCollection();
         SetupMockDbContext(services2, "Host=l;Port=5432;Database=2;Username=2;Password=2");
-        services2.AddNpgsqlSource<TestDbContext>("id2");
+        services2.AddNpgsqlProvider<TestDbContext>("id2");
 
         var provider2 = services2.BuildServiceProvider();
-        var ops2 = provider2.GetRequiredService<ISourceOperations>();
+        var ops2 = provider2.GetRequiredService<ISourceProvider>();
         Assert.IsType<NpgsqlOperations>(ops2);
 
         // Method 3: With sourceId and connectionString
         var services3 = new ServiceCollection();
-        services3.AddNpgsqlSource("id3", "Host=l;Port=5432;Database=3;Username=3;Password=3");
+        services3.AddNpgsqlProvider("id3", "Host=l;Port=5432;Database=3;Username=3;Password=3");
 
         var provider3 = services3.BuildServiceProvider();
-        var ops3 = provider3.GetRequiredService<ISourceOperations>();
+        var ops3 = provider3.GetRequiredService<ISourceProvider>();
         Assert.IsType<NpgsqlOperations>(ops3);
 
         // Method 4: With sourceId and configure action
@@ -327,7 +327,7 @@ public class ServiceCollectionExtensionsTests
             builder.ConnectionStringBuilder.ConnectionString = "Host=localhost");
 
         var provider4 = services4.BuildServiceProvider();
-        var ops4 = provider4.GetRequiredService<ISourceOperations>();
+        var ops4 = provider4.GetRequiredService<ISourceProvider>();
         Assert.IsType<NpgsqlOperations>(ops4);
     }
 

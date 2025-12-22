@@ -9,10 +9,10 @@ namespace Tracker.Npgsql.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddNpgsqlSource<TContext>(this IServiceCollection services)
+    public static IServiceCollection AddNpgsqlProvider<TContext>(this IServiceCollection services)
          where TContext : DbContext
     {
-        return services.AddSingleton<ISourceOperations>((provider) =>
+        return services.AddSingleton<ISourceProvider>((provider) =>
         {
             using var scope = provider.CreateScope();
 
@@ -20,19 +20,19 @@ public static class ServiceCollectionExtensions
             var connectionString = dbContext.Database.GetConnectionString() ??
                 throw new NullReferenceException($"Connection string is not found for context {typeof(TContext).FullName}.");
 
-            var sourceIdGenerator = scope.ServiceProvider.GetRequiredService<ISourceIdGenerator>();
+            var sourceIdGenerator = scope.ServiceProvider.GetRequiredService<IProviderIdGenerator>();
             var sourceId = sourceIdGenerator.GenerateId<TContext>();
 
             return new NpgsqlOperations(sourceId, connectionString);
         });
     }
 
-    public static IServiceCollection AddNpgsqlSource<TContext>(this IServiceCollection services, string sourceId)
+    public static IServiceCollection AddNpgsqlProvider<TContext>(this IServiceCollection services, string sourceId)
          where TContext : DbContext
     {
         ArgumentException.ThrowIfNullOrEmpty(sourceId);
 
-        return services.AddSingleton<ISourceOperations>((provider) =>
+        return services.AddSingleton<ISourceProvider>((provider) =>
         {
             using var scope = provider.CreateScope();
 
@@ -44,12 +44,12 @@ public static class ServiceCollectionExtensions
         });
     }
 
-    public static IServiceCollection AddNpgsqlSource(this IServiceCollection services, string sourceId, string connectionString)
+    public static IServiceCollection AddNpgsqlProvider(this IServiceCollection services, string sourceId, string connectionString)
     {
         ArgumentException.ThrowIfNullOrEmpty(sourceId);
         ArgumentException.ThrowIfNullOrEmpty(connectionString);
 
-        return services.AddSingleton<ISourceOperations>((_) =>
+        return services.AddSingleton<ISourceProvider>((_) =>
             new NpgsqlOperations(sourceId, connectionString)
         );
     }
@@ -59,7 +59,7 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configure);
         ArgumentException.ThrowIfNullOrEmpty(sourceId);
 
-        return services.AddSingleton<ISourceOperations>((_) =>
+        return services.AddSingleton<ISourceProvider>((_) =>
         {
             var dataSourceBuilder = new NpgsqlDataSourceBuilder();
             configure(dataSourceBuilder);

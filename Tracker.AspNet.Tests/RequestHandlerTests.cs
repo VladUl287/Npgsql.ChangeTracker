@@ -49,7 +49,7 @@ public class RequestHandlerTests
             await _handler.IsNotModified(context, null, CancellationToken.None));
     }
 
-    private delegate bool TryResolveDelegate(string sourceId, out ISourceOperations? sourceOperations);
+    private delegate bool TryResolveDelegate(string sourceId, out ISourceProvider? sourceOperations);
 
     [Fact]
     public async Task IsNotModified_ShouldReturnNotModified_WhenETagMatches()
@@ -66,7 +66,7 @@ public class RequestHandlerTests
             CacheControl = "no-cache"
         };
 
-        var mockSourceOperations = new Mock<ISourceOperations>();
+        var mockSourceOperations = new Mock<ISourceProvider>();
         mockSourceOperations.Setup(x => x.GetLastVersion(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero).Ticks);
 
@@ -106,7 +106,7 @@ public class RequestHandlerTests
             CacheControl = "no-cache"
         };
 
-        var mockSourceOperations = new Mock<ISourceOperations>();
+        var mockSourceOperations = new Mock<ISourceProvider>();
         mockSourceOperations.Setup(x => x.GetLastVersion(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero).Ticks);
 

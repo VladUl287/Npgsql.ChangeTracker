@@ -6,7 +6,7 @@ using Tracker.Core.Services.Contracts;
 
 namespace Tracker.Core.Services;
 
-public sealed class DefaultSourceIdGenerator : ISourceIdGenerator
+public sealed class DefaultSourceIdGenerator : IProviderIdGenerator
 {
     public string GenerateId<TContext>() where TContext : DbContext
     {

@@ -6,7 +6,7 @@ using Tracker.Core.Services.Contracts;
 
 namespace Tracker.SqlServer.Services;
 
-public sealed class SqlServerIndexUsageOperations : ISourceOperations, IDisposable
+public sealed class SqlServerIndexUsageOperations : ISourceProvider, IDisposable
 {
     private readonly string _sourceId;
     private readonly DbDataSource _dataSource;
@@ -30,7 +30,7 @@ public sealed class SqlServerIndexUsageOperations : ISourceOperations, IDisposab
         _dataSource = SqlClientFactory.Instance.CreateDataSource(connectionString);
     }
 
-    public string SourceId => _sourceId;
+    public string Id => _sourceId;
 
     public async ValueTask<long> GetLastVersion(string key, CancellationToken token = default)
     {

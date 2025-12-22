@@ -7,7 +7,7 @@ namespace Tracker.AspNet.Tests;
 
 public class SourceOperationsValidatorTests
 {
-    public interface ITestSourceOperations : ISourceOperations
+    public interface ITestSourceOperations : ISourceProvider
     {
         // Marker interface for testing
     }
@@ -16,15 +16,15 @@ public class SourceOperationsValidatorTests
     public void Configure_WithValidOperations_ReturnsNextDelegate()
     {
         // Arrange
-        var mockSource1 = Substitute.For<ISourceOperations>();
-        mockSource1.SourceId.Returns("source1");
+        var mockSource1 = Substitute.For<ISourceProvider>();
+        mockSource1.Id.Returns("source1");
 
-        var mockSource2 = Substitute.For<ISourceOperations>();
-        mockSource2.SourceId.Returns("source2");
+        var mockSource2 = Substitute.For<ISourceProvider>();
+        mockSource2.Id.Returns("source2");
 
-        var operations = new List<ISourceOperations> { mockSource1, mockSource2 };
+        var operations = new List<ISourceProvider> { mockSource1, mockSource2 };
 
-        var validator = new SourceOperationsValidator(operations);
+        var validator = new DefaultProvidersValidator(operations);
         var mockAppBuilder = Substitute.For<IApplicationBuilder>();
 
         Action<IApplicationBuilder> next = builder =>
@@ -48,26 +48,26 @@ public class SourceOperationsValidatorTests
     public void Configure_WithEmptyOperations_ThrowsInvalidOperationException()
     {
         // Arrange
-        var emptyOperations = new List<ISourceOperations>();
-        var validator = new SourceOperationsValidator(emptyOperations);
+        var emptyOperations = new List<ISourceProvider>();
+        var validator = new DefaultProvidersValidator(emptyOperations);
 
         Action<IApplicationBuilder> next = builder => { };
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => validator.Configure(next));
 
-        Assert.Contains($"At least one {nameof(ISourceOperations)} implementation is required", exception.Message);
+        Assert.Contains($"At least one {nameof(ISourceProvider)} implementation is required", exception.Message);
     }
 
     [Fact]
     public void Configure_WithSingleOperation_DoesNotThrow()
     {
         // Arrange
-        var mockSource = Substitute.For<ISourceOperations>();
-        mockSource.SourceId.Returns("single-source");
+        var mockSource = Substitute.For<ISourceProvider>();
+        mockSource.Id.Returns("single-source");
 
-        var operations = new List<ISourceOperations> { mockSource };
-        var validator = new SourceOperationsValidator(operations);
+        var operations = new List<ISourceProvider> { mockSource };
+        var validator = new DefaultProvidersValidator(operations);
 
         Action<IApplicationBuilder> next = builder => { };
         var mockAppBuilder = Substitute.For<IApplicationBuilder>();
@@ -84,24 +84,24 @@ public class SourceOperationsValidatorTests
     public void Configure_WithDuplicateSourceIds_ThrowsInvalidOperationException()
     {
         // Arrange
-        var mockSource1 = Substitute.For<ISourceOperations>();
-        mockSource1.SourceId.Returns("duplicate-id");
+        var mockSource1 = Substitute.For<ISourceProvider>();
+        mockSource1.Id.Returns("duplicate-id");
 
-        var mockSource2 = Substitute.For<ISourceOperations>();
-        mockSource2.SourceId.Returns("duplicate-id");
+        var mockSource2 = Substitute.For<ISourceProvider>();
+        mockSource2.Id.Returns("duplicate-id");
 
-        var mockSource3 = Substitute.For<ISourceOperations>();
-        mockSource3.SourceId.Returns("unique-id");
+        var mockSource3 = Substitute.For<ISourceProvider>();
+        mockSource3.Id.Returns("unique-id");
 
-        var operations = new List<ISourceOperations> { mockSource1, mockSource2, mockSource3 };
-        var validator = new SourceOperationsValidator(operations);
+        var operations = new List<ISourceProvider> { mockSource1, mockSource2, mockSource3 };
+        var validator = new DefaultProvidersValidator(operations);
 
         Action<IApplicationBuilder> next = builder => { };
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => validator.Configure(next));
 
-        Assert.Contains($"Duplicate {nameof(ISourceOperations.SourceId)} values found", exception.Message);
+        Assert.Contains($"Duplicate {nameof(ISourceProvider.Id)} values found", exception.Message);
         Assert.Contains("duplicate-id", exception.Message);
     }
 
@@ -109,30 +109,30 @@ public class SourceOperationsValidatorTests
     public void Configure_WithMultipleDuplicateSourceIds_IncludesAllInExceptionMessage()
     {
         // Arrange
-        var mockSource1 = Substitute.For<ISourceOperations>();
-        mockSource1.SourceId.Returns("duplicate1");
+        var mockSource1 = Substitute.For<ISourceProvider>();
+        mockSource1.Id.Returns("duplicate1");
 
-        var mockSource2 = Substitute.For<ISourceOperations>();
-        mockSource2.SourceId.Returns("duplicate1");
+        var mockSource2 = Substitute.For<ISourceProvider>();
+        mockSource2.Id.Returns("duplicate1");
 
-        var mockSource3 = Substitute.For<ISourceOperations>();
-        mockSource3.SourceId.Returns("duplicate2");
+        var mockSource3 = Substitute.For<ISourceProvider>();
+        mockSource3.Id.Returns("duplicate2");
 
-        var mockSource4 = Substitute.For<ISourceOperations>();
-        mockSource4.SourceId.Returns("duplicate2");
+        var mockSource4 = Substitute.For<ISourceProvider>();
+        mockSource4.Id.Returns("duplicate2");
 
-        var mockSource5 = Substitute.For<ISourceOperations>();
-        mockSource5.SourceId.Returns("unique");
+        var mockSource5 = Substitute.For<ISourceProvider>();
+        mockSource5.Id.Returns("unique");
 
-        var operations = new List<ISourceOperations> { mockSource1, mockSource2, mockSource3, mockSource4, mockSource5 };
-        var validator = new SourceOperationsValidator(operations);
+        var operations = new List<ISourceProvider> { mockSource1, mockSource2, mockSource3, mockSource4, mockSource5 };
+        var validator = new DefaultProvidersValidator(operations);
 
         Action<IApplicationBuilder> next = builder => { };
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => validator.Configure(next));
 
-        Assert.Contains($"Duplicate {nameof(ISourceOperations.SourceId)} values found", exception.Message);
+        Assert.Contains($"Duplicate {nameof(ISourceProvider.Id)} values found", exception.Message);
         Assert.Contains("duplicate1", exception.Message);
         Assert.Contains("duplicate2", exception.Message);
     }
@@ -141,11 +141,11 @@ public class SourceOperationsValidatorTests
     public void Configure_WithValidOperations_CallsNextDelegateWithBuilder()
     {
         // Arrange
-        var mockSource = Substitute.For<ISourceOperations>();
-        mockSource.SourceId.Returns("source1");
+        var mockSource = Substitute.For<ISourceProvider>();
+        mockSource.Id.Returns("source1");
 
-        var operations = new List<ISourceOperations> { mockSource };
-        var validator = new SourceOperationsValidator(operations);
+        var operations = new List<ISourceProvider> { mockSource };
+        var validator = new DefaultProvidersValidator(operations);
 
         var mockAppBuilder = Substitute.For<IApplicationBuilder>();
         var nextWasCalled = false;
@@ -170,11 +170,11 @@ public class SourceOperationsValidatorTests
     public void Configure_ReturnsSameDelegate_WhenNoExceptions()
     {
         // Arrange
-        var mockSource = Substitute.For<ISourceOperations>();
-        mockSource.SourceId.Returns("source1");
+        var mockSource = Substitute.For<ISourceProvider>();
+        mockSource.Id.Returns("source1");
 
-        var operations = new List<ISourceOperations> { mockSource };
-        var validator = new SourceOperationsValidator(operations);
+        var operations = new List<ISourceProvider> { mockSource };
+        var validator = new DefaultProvidersValidator(operations);
 
         var mockAppBuilder = Substitute.For<IApplicationBuilder>();
         Action<IApplicationBuilder> originalNext = builder => { };
@@ -190,14 +190,14 @@ public class SourceOperationsValidatorTests
     public void Configure_WithEmptySourceId_DoesNotThrow()
     {
         // Arrange
-        var mockSource1 = Substitute.For<ISourceOperations>();
-        mockSource1.SourceId.Returns("");
+        var mockSource1 = Substitute.For<ISourceProvider>();
+        mockSource1.Id.Returns("");
 
-        var mockSource2 = Substitute.For<ISourceOperations>();
-        mockSource2.SourceId.Returns("source2");
+        var mockSource2 = Substitute.For<ISourceProvider>();
+        mockSource2.Id.Returns("source2");
 
-        var operations = new List<ISourceOperations> { mockSource1, mockSource2 };
-        var validator = new SourceOperationsValidator(operations);
+        var operations = new List<ISourceProvider> { mockSource1, mockSource2 };
+        var validator = new DefaultProvidersValidator(operations);
 
         Action<IApplicationBuilder> next = builder => { };
         var mockAppBuilder = Substitute.For<IApplicationBuilder>();
@@ -214,20 +214,20 @@ public class SourceOperationsValidatorTests
     public void Configure_WithDuplicateEmptySourceIds_ThrowsInvalidOperationException()
     {
         // Arrange
-        var mockSource1 = Substitute.For<ISourceOperations>();
-        mockSource1.SourceId.Returns("");
+        var mockSource1 = Substitute.For<ISourceProvider>();
+        mockSource1.Id.Returns("");
 
-        var mockSource2 = Substitute.For<ISourceOperations>();
-        mockSource2.SourceId.Returns("");
+        var mockSource2 = Substitute.For<ISourceProvider>();
+        mockSource2.Id.Returns("");
 
-        var operations = new List<ISourceOperations> { mockSource1, mockSource2 };
-        var validator = new SourceOperationsValidator(operations);
+        var operations = new List<ISourceProvider> { mockSource1, mockSource2 };
+        var validator = new DefaultProvidersValidator(operations);
 
         Action<IApplicationBuilder> next = builder => { };
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => validator.Configure(next));
 
-        Assert.Contains($"Duplicate {nameof(ISourceOperations.SourceId)} values found", exception.Message);
+        Assert.Contains($"Duplicate {nameof(ISourceProvider.Id)} values found", exception.Message);
     }
 }

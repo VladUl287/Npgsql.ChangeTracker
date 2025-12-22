@@ -39,7 +39,7 @@ public class NpgsqlOperationsIntegrationTests : IAsyncLifetime
         var ops = new NpgsqlOperations("test-id", _connectionString);
 
         // Assert
-        Assert.Equal("test-id", ops.SourceId);
+        Assert.Equal("test-id", ops.Id);
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class NpgsqlOperationsIntegrationTests : IAsyncLifetime
         var ops = new NpgsqlOperations("test-id", _connectionString);
 
         // Assert
-        Assert.Equal("test-id", ops.SourceId);
+        Assert.Equal("test-id", ops.Id);
         ops.Dispose();
     }
 

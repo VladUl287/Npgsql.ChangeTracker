@@ -7,13 +7,13 @@ using Tracker.Core.Services.Contracts;
 
 namespace Tracker.AspNet.Services;
 
-public sealed class ProviderResolver(
-    IEnumerable<ISourceOperations> providers, ISourceIdGenerator idGenerator, ILogger<ProviderResolver> logger) : IProviderResolver
+public sealed class DefaultProviderResolver(
+    IEnumerable<ISourceProvider> providers, IProviderIdGenerator idGenerator, ILogger<DefaultProviderResolver> logger) : IProviderResolver
 {
-    private readonly FrozenDictionary<string, ISourceOperations> _store = providers.ToFrozenDictionary(c => c.SourceId);
-    private readonly ISourceOperations _default = providers.First();
+    private readonly FrozenDictionary<string, ISourceProvider> _store = providers.ToFrozenDictionary(c => c.Id);
+    private readonly ISourceProvider _default = providers.First();
 
-    public ISourceOperations? SelectProvider(string? sourceId, ImmutableGlobalOptions options)
+    public ISourceProvider? SelectProvider(string? sourceId, ImmutableGlobalOptions options)
     {
         if (sourceId is not null)
         {
@@ -36,7 +36,7 @@ public sealed class ProviderResolver(
         return options.SourceOperations;
     }
 
-    public ISourceOperations? SelectProvider(GlobalOptions options)
+    public ISourceProvider? SelectProvider(GlobalOptions options)
     {
         var sourceId = options.Source;
 
@@ -61,7 +61,7 @@ public sealed class ProviderResolver(
         return options.SourceOperations;
     }
 
-    public ISourceOperations? SelectProvider<TContext>(string? sourceId, ImmutableGlobalOptions options) where TContext : DbContext
+    public ISourceProvider? SelectProvider<TContext>(string? sourceId, ImmutableGlobalOptions options) where TContext : DbContext
     {
         if (sourceId is not null)
         {
@@ -94,7 +94,7 @@ public sealed class ProviderResolver(
         return options.SourceOperations;
     }
 
-    public ISourceOperations? SelectProvider<TContext>(GlobalOptions options) where TContext : DbContext
+    public ISourceProvider? SelectProvider<TContext>(GlobalOptions options) where TContext : DbContext
     {
         var sourceId = options.Source;
 

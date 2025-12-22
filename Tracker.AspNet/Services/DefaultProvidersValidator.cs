@@ -4,7 +4,7 @@ using Tracker.Core.Services.Contracts;
 
 namespace Tracker.AspNet.Services;
 
-public sealed class SourceOperationsValidator(IEnumerable<ISourceOperations> operations) : IStartupFilter
+public sealed class DefaultProvidersValidator(IEnumerable<ISourceProvider> operations) : IStartupFilter
 {
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
     {
@@ -16,16 +16,16 @@ public sealed class SourceOperationsValidator(IEnumerable<ISourceOperations> ope
     {
         if (!operations.Any())
             throw new InvalidOperationException(
-                $"At least one {nameof(ISourceOperations)} implementation is required");
+                $"At least one {nameof(ISourceProvider)} implementation is required");
 
         var duplicates = operations
-            .GroupBy(o => o.SourceId)
+            .GroupBy(o => o.Id)
             .Where(g => g.Count() > 1)
             .Select(g => g.Key)
             .ToList();
 
         if (duplicates.Count != 0)
             throw new InvalidOperationException(
-                $"Duplicate {nameof(ISourceOperations.SourceId)} values found: {string.Join(", ", duplicates)}");
+                $"Duplicate {nameof(ISourceProvider.Id)} values found: {string.Join(", ", duplicates)}");
     }
 }

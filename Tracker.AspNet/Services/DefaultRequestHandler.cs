@@ -26,7 +26,7 @@ public sealed class DefaultRequestHandler(
                 options.SourceOperationsFactory?.Invoke(ctx) ??
                 throw new NullReferenceException("Source operations provider not found");
 
-            logger.LogSourceProviderResolved(traceId, operationsProvider.SourceId);
+            logger.LogSourceProviderResolved(traceId, operationsProvider.Id);
 
             var lastTimestamp = await GetLastVersionAsync(options, operationsProvider, token);
 
@@ -66,7 +66,7 @@ public sealed class DefaultRequestHandler(
         return true;
     }
 
-    private async ValueTask<ulong> GetLastVersionAsync(ImmutableGlobalOptions options, ISourceOperations sourceOperations, CancellationToken token)
+    private async ValueTask<ulong> GetLastVersionAsync(ImmutableGlobalOptions options, ISourceProvider sourceOperations, CancellationToken token)
     {
         switch (options.Tables.Length)
         {

@@ -5,7 +5,7 @@ namespace Tracker.Core.Services.Contracts;
 /// <summary>
 /// Defines operations for managing source data tracking and versions management.
 /// </summary>
-public interface ISourceOperations
+public interface ISourceProvider
 {
     /// <summary>
     /// Gets the unique identifier for the source.
@@ -13,7 +13,7 @@ public interface ISourceOperations
     /// <value>
     /// A string representing the source identifier.
     /// </value>
-    string SourceId { get; }
+    string Id { get; }
 
     /// <summary>
     /// Gets the last version number for a specific key.
