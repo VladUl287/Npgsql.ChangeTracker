@@ -11,7 +11,7 @@ public sealed class ProviderResolver(
     IEnumerable<ISourceOperations> providers, ISourceIdGenerator idGenerator, ILogger<ProviderResolver> logger) : IProviderResolver
 {
     private readonly FrozenDictionary<string, ISourceOperations> _store = providers.ToFrozenDictionary(c => c.SourceId);
-    private readonly ISourceOperations _first = providers.First();
+    private readonly ISourceOperations _default = providers.First();
 
     public ISourceOperations? SelectProvider(string? sourceId, ImmutableGlobalOptions options)
     {
@@ -29,7 +29,7 @@ public sealed class ProviderResolver(
         if (options is { SourceOperations: null, SourceOperationsFactory: null })
         {
             logger.LogInformation("");
-            return _first;
+            return _default;
         }
 
         logger.LogInformation("");
@@ -39,6 +39,7 @@ public sealed class ProviderResolver(
     public ISourceOperations? SelectProvider(GlobalOptions options)
     {
         var sourceId = options.Source;
+
         if (sourceId is not null)
         {
             if (_store.TryGetValue(sourceId, out var provider))
@@ -53,7 +54,7 @@ public sealed class ProviderResolver(
         if (options is { SourceOperations: null, SourceOperationsFactory: null })
         {
             logger.LogInformation("");
-            return _first;
+            return _default;
         }
 
         logger.LogInformation("");
@@ -73,21 +74,20 @@ public sealed class ProviderResolver(
             throw new InvalidOperationException($"Fail to resolve operation with id - '{sourceId}'");
         }
 
+        logger.LogInformation("");
+
+        sourceId = idGenerator.GenerateId<TContext>();
+
+        if (_store.TryGetValue(sourceId, out var contextProvider))
+        {
+            logger.LogInformation("");
+            return contextProvider;
+        }
+
         if (options is { SourceOperations: null, SourceOperationsFactory: null })
         {
             logger.LogInformation("");
-
-            sourceId = idGenerator.GenerateId<TContext>();
-
-            logger.LogInformation("");
-
-            if (_store.TryGetValue(sourceId, out var provider))
-            {
-                logger.LogInformation("");
-                return provider;
-            }
-
-            return _first;
+            return _default;
         }
 
         logger.LogInformation("");
@@ -109,21 +109,22 @@ public sealed class ProviderResolver(
             throw new InvalidOperationException($"Fail to resolve operation with id - '{sourceId}'");
         }
 
+        logger.LogInformation("");
+
+        sourceId = idGenerator.GenerateId<TContext>();
+
+        logger.LogInformation("");
+
+        if (_store.TryGetValue(sourceId, out var contextProvider))
+        {
+            logger.LogInformation("");
+            return contextProvider;
+        }
+
         if (options is { SourceOperations: null, SourceOperationsFactory: null })
         {
             logger.LogInformation("");
-
-            sourceId = idGenerator.GenerateId<TContext>();
-
-            logger.LogInformation("");
-
-            if (_store.TryGetValue(sourceId, out var provider))
-            {
-                logger.LogInformation("");
-                return provider;
-            }
-
-            return _first;
+            return _default;
         }
 
         logger.LogInformation("");
