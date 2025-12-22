@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Collections.Immutable;
 using Tracker.AspNet.Attributes;
 using Tracker.AspNet.Models;
 using Tracker.AspNet.Services.Contracts;
@@ -20,32 +19,40 @@ public class TrackAttributeGenericTests
     private readonly Mock<IServiceProvider> _serviceProviderMock;
     private readonly Mock<IServiceScopeFactory> _serviceScopeFactoryMock;
     private readonly Mock<IServiceScope> _serviceScopeMock;
-    private readonly Mock<IServiceProvider> _scopedServiceProviderMock;
+
+    private readonly Mock<IProviderResolver> _providerResolverMock;
+    private readonly Mock<ISourceProvider> _sourceProvider;
+
     private readonly Mock<IRequestFilter> _requestFilterMock;
     private readonly Mock<IRequestHandler> _requestHandlerMock;
     private readonly Mock<IProviderIdGenerator> _sourceIdGeneratorMock;
     private readonly Mock<ILogger<TrackAttribute<TestDbContext>>> _loggerMock;
+
     private readonly Mock<TestDbContext> _dbContextMock;
     private readonly ImmutableGlobalOptions _defaultOptions;
-    private readonly HttpContext _httpContext;
     private readonly ActionExecutingContext _actionExecutingContext;
+    private readonly HttpContext _httpContext;
 
     public TrackAttributeGenericTests()
     {
         _serviceProviderMock = new Mock<IServiceProvider>();
         _serviceScopeFactoryMock = new Mock<IServiceScopeFactory>();
         _serviceScopeMock = new Mock<IServiceScope>();
-        _scopedServiceProviderMock = new Mock<IServiceProvider>();
+
+        _providerResolverMock = new Mock<IProviderResolver>();
+        _sourceProvider = new Mock<ISourceProvider>();
+
         _requestFilterMock = new Mock<IRequestFilter>();
         _requestHandlerMock = new Mock<IRequestHandler>();
         _sourceIdGeneratorMock = new Mock<IProviderIdGenerator>();
         _loggerMock = new Mock<ILogger<TrackAttribute<TestDbContext>>>();
+
         _dbContextMock = new Mock<TestDbContext>();
 
         _defaultOptions = new ImmutableGlobalOptions
         {
             CacheControl = "max-age=3600",
-            Tables = ImmutableArray<string>.Empty
+            Tables = []
         };
 
         _httpContext = new DefaultHttpContext
@@ -54,11 +61,7 @@ public class TrackAttributeGenericTests
         };
 
         var actionContext = new ActionContext(_httpContext, new(), new ActionDescriptor());
-        _actionExecutingContext = new ActionExecutingContext(
-            actionContext,
-            new List<IFilterMetadata>(),
-            new Dictionary<string, object?>(),
-            new object());
+        _actionExecutingContext = new ActionExecutingContext(actionContext, [], new Dictionary<string, object?>(), new object());
     }
 
     [Fact]
@@ -78,68 +81,16 @@ public class TrackAttributeGenericTests
     }
 
     [Fact]
-    public async Task OnActionExecutionAsync_RequestNotValid_ExecutesNextDelegate()
-    {
-        // Arrange
-        var attribute = new TrackAttribute<TestDbContext>();
-        var nextCalled = false;
-        var nextDelegate = new ActionExecutionDelegate(() =>
-        {
-            nextCalled = true;
-            return Task.FromResult<ActionExecutedContext>(null!);
-        });
-
-        SetupServiceProvider();
-        _requestFilterMock.Setup(x => x.RequestValid(_httpContext, It.IsAny<ImmutableGlobalOptions>()))
-            .Returns(false);
-
-        // Act
-        await attribute.OnActionExecutionAsync(_actionExecutingContext, nextDelegate);
-
-        // Assert
-        Assert.True(nextCalled);
-        _requestHandlerMock.Verify(x => x.IsNotModified(It.IsAny<HttpContext>(), It.IsAny<ImmutableGlobalOptions>(), default),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task OnActionExecutionAsync_RequestValidButModified_ExecutesNextDelegate()
-    {
-        // Arrange
-        var attribute = new TrackAttribute<TestDbContext>();
-        var nextCalled = false;
-        var nextDelegate = new ActionExecutionDelegate(() =>
-        {
-            nextCalled = true;
-            return Task.FromResult<ActionExecutedContext>(null!);
-        });
-
-        SetupServiceProvider();
-        _requestFilterMock.Setup(x => x.RequestValid(_httpContext, It.IsAny<ImmutableGlobalOptions>()))
-            .Returns(true);
-        _requestHandlerMock.Setup(x => x.IsNotModified(_httpContext, It.IsAny<ImmutableGlobalOptions>(), default))
-            .ReturnsAsync(false);
-
-        // Act
-        await attribute.OnActionExecutionAsync(_actionExecutingContext, nextDelegate);
-
-        // Assert
-        Assert.True(nextCalled);
-        _requestHandlerMock.Verify(x => x.IsNotModified(_httpContext, It.IsAny<ImmutableGlobalOptions>(), default), Times.Once);
-    }
-
-    [Fact]
     public void GetOptions_FirstCall_CreatesScopeAndBuildsOptions()
     {
         // Arrange
-        var attribute = new TrackAttribute<TestDbContext>(
-            new[] { "users", "orders" },
-            new[] { typeof(Product), typeof(Category) },
-            "custom-source",
-            "no-store");
+        var attribute = new TrackAttribute<TestDbContext>(["users", "orders"], [typeof(Product), typeof(Category)], "custom-source", "no-store");
 
         SetupServiceProvider();
-        _actionExecutingContext.ActionDescriptor.DisplayName = "TestController.TestAction";
+        _sourceProvider.Setup(x => x.Id)
+            .Returns("custom-source");
+        _providerResolverMock.Setup(x => x.SelectProvider("custom-source", It.IsAny<ImmutableGlobalOptions>()))
+            .Returns(_sourceProvider.Object);
 
         // Act
         var result = attribute.GetOptions(_actionExecutingContext);
@@ -216,26 +167,30 @@ public class TrackAttributeGenericTests
     }
 
     [Fact]
-    public void GetOptions_ThreadSafety_MultipleThreadsShouldNotCreateMultipleInstances()
+    public async Task GetOptions_ThreadSafety_MultipleThreadsShouldNotCreateMultipleInstances()
     {
         // Arrange
+        var count = 10;
+        var scopeCreationCount = 0;
+        var tasks = new List<Task>();
+        var barrier = new Barrier(count);
         var attribute = new TrackAttribute<TestDbContext>();
         var results = new List<ImmutableGlobalOptions>();
-        var tasks = new List<Task>();
-        var barrier = new Barrier(10);
-        var scopeCreationCount = 0;
 
         _serviceProviderMock.Setup(x => x.GetService(typeof(IServiceScopeFactory)))
             .Returns(_serviceScopeFactoryMock.Object);
+
         _serviceScopeFactoryMock.Setup(x => x.CreateScope())
             .Callback(() => Interlocked.Increment(ref scopeCreationCount))
             .Returns(_serviceScopeMock.Object);
-        _serviceScopeMock.Setup(x => x.ServiceProvider).Returns(_scopedServiceProviderMock.Object);
 
-        SetupScopedServices();
+        _serviceScopeMock.Setup(x => x.ServiceProvider)
+            .Returns(_serviceProviderMock.Object);
 
-        // Act - Simulate concurrent access
-        for (int i = 0; i < 10; i++)
+        SetupServiceProvider();
+
+        // Act
+        for (int i = 0; i < count; i++)
         {
             tasks.Add(Task.Run(() =>
             {
@@ -244,12 +199,12 @@ public class TrackAttributeGenericTests
             }));
         }
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll([.. tasks]);
 
         // Assert
         var firstResult = results[0];
         Assert.All(results, result => Assert.Same(firstResult, result));
-        Assert.Equal(1, scopeCreationCount); // Should only create scope once
+        Assert.Equal(1, scopeCreationCount);
     }
 
     //[Fact]
@@ -334,34 +289,100 @@ public class TrackAttributeGenericTests
         Assert.Empty(result.Tables);
     }
 
+    [Fact]
+    public async Task OnActionExecutionAsync_RequestNotValid_ExecutesNextDelegate()
+    {
+        // Arrange
+        var attribute = new TrackAttribute<TestDbContext>();
+        var nextCalled = false;
+        var nextDelegate = new ActionExecutionDelegate(() =>
+        {
+            nextCalled = true;
+            return Task.FromResult<ActionExecutedContext>(null!);
+        });
+
+        SetupServiceProvider();
+        _requestFilterMock.Setup(x => x.RequestValid(_httpContext, It.IsAny<ImmutableGlobalOptions>()))
+            .Returns(false);
+
+        // Act
+        await attribute.OnActionExecutionAsync(_actionExecutingContext, nextDelegate);
+
+        // Assert
+        Assert.True(nextCalled);
+        _requestHandlerMock.Verify(x => x.IsNotModified(It.IsAny<HttpContext>(), It.IsAny<ImmutableGlobalOptions>(), default),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task OnActionExecutionAsync_RequestValidButModified_ExecutesNextDelegate()
+    {
+        // Arrange
+        var attribute = new TrackAttribute<TestDbContext>();
+        var nextCalled = false;
+        var nextDelegate = new ActionExecutionDelegate(() =>
+        {
+            nextCalled = true;
+            return Task.FromResult<ActionExecutedContext>(null!);
+        });
+
+        SetupServiceProvider();
+        _requestFilterMock.Setup(x => x.RequestValid(_httpContext, It.IsAny<ImmutableGlobalOptions>()))
+            .Returns(true);
+        _requestHandlerMock.Setup(x => x.IsNotModified(_httpContext, It.IsAny<ImmutableGlobalOptions>(), default))
+            .ReturnsAsync(false);
+
+        // Act
+        await attribute.OnActionExecutionAsync(_actionExecutingContext, nextDelegate);
+
+        // Assert
+        Assert.True(nextCalled);
+        _requestHandlerMock.Verify(x => x.IsNotModified(_httpContext, It.IsAny<ImmutableGlobalOptions>(), default), Times.Once);
+    }
+
+
     private void SetupServiceProvider()
     {
         _serviceProviderMock.Setup(x => x.GetService(typeof(IServiceScopeFactory)))
             .Returns(_serviceScopeFactoryMock.Object);
+
         _serviceScopeFactoryMock.Setup(x => x.CreateScope())
             .Returns(_serviceScopeMock.Object);
-        _serviceScopeMock.Setup(x => x.ServiceProvider).Returns(_scopedServiceProviderMock.Object);
-        _serviceScopeMock.Setup(x => x.Dispose()).Verifiable();
+
+        _serviceScopeMock.Setup(x => x.ServiceProvider)
+            .Returns(_serviceProviderMock.Object);
+
+        _serviceScopeMock.Setup(x => x.Dispose())
+            .Verifiable();
 
         SetupScopedServices();
     }
 
     private void SetupScopedServices()
     {
-        _scopedServiceProviderMock.Setup(x => x.GetService(typeof(ImmutableGlobalOptions)))
-            .Returns(_defaultOptions);
-        _scopedServiceProviderMock.Setup(x => x.GetService(typeof(IProviderIdGenerator)))
+        _serviceProviderMock.Setup(x => x.GetService(typeof(IProviderIdGenerator)))
             .Returns(_sourceIdGeneratorMock.Object);
-        _scopedServiceProviderMock.Setup(x => x.GetService(typeof(ILogger<TrackAttribute<TestDbContext>>)))
-            .Returns(_loggerMock.Object);
-        _scopedServiceProviderMock.Setup(x => x.GetService(typeof(TestDbContext)))
+
+        _serviceProviderMock.Setup(x => x.GetService(typeof(TestDbContext)))
             .Returns(_dbContextMock.Object);
 
-        // Setup for OnActionExecutionAsync
+        _serviceProviderMock.Setup(x => x.GetService(typeof(IProviderResolver)))
+            .Returns(_providerResolverMock.Object);
+
         _serviceProviderMock.Setup(x => x.GetService(typeof(IRequestFilter)))
             .Returns(_requestFilterMock.Object);
+
+        _serviceProviderMock.Setup(x => x.GetService(typeof(IRequestFilter)))
+            .Returns(_requestFilterMock.Object);
+
         _serviceProviderMock.Setup(x => x.GetService(typeof(IRequestHandler)))
             .Returns(_requestHandlerMock.Object);
+
+        _serviceProviderMock.Setup(x => x.GetService(typeof(ImmutableGlobalOptions)))
+            .Returns(_defaultOptions);
+
+        _serviceProviderMock.Setup(x => x.GetService(typeof(ILogger<TrackAttribute<TestDbContext>>)))
+            .Returns(_loggerMock.Object);
     }
 }
 
