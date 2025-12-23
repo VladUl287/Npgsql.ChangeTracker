@@ -12,9 +12,9 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddNpgsqlProvider<TContext>(this IServiceCollection services)
          where TContext : DbContext
     {
-        var fullName = typeof(TContext).FullName;
-        ArgumentException.ThrowIfNullOrEmpty(fullName);
-        return services.AddNpgsqlProvider<TContext>(fullName);
+        var contextFullName = typeof(TContext).FullName;
+        ArgumentException.ThrowIfNullOrEmpty(contextFullName);
+        return services.AddNpgsqlProvider<TContext>(contextFullName);
     }
 
     public static IServiceCollection AddNpgsqlProvider<TContext>(this IServiceCollection services, string providerId)
@@ -22,7 +22,7 @@ public static class ServiceCollectionExtensions
     {
         ArgumentException.ThrowIfNullOrEmpty(providerId);
 
-        return services.AddKeyedSingleton<ISourceProvider>(providerId, (provider, key) =>
+        return services.AddKeyedSingleton<ISourceProvider>(providerId, (provider, _) =>
         {
             using var scope = provider.CreateScope();
 
@@ -30,10 +30,7 @@ public static class ServiceCollectionExtensions
             var connectionString = dbContext.Database.GetConnectionString() ??
                 throw new NullReferenceException($"Connection string is not found for context {typeof(TContext).FullName}.");
 
-            if (key is not string keyRaw)
-                throw new InvalidCastException();
-
-            return new NpgsqlOperations(keyRaw, connectionString);
+            return new NpgsqlOperations(providerId, connectionString);
         });
     }
 
@@ -42,13 +39,9 @@ public static class ServiceCollectionExtensions
         ArgumentException.ThrowIfNullOrEmpty(providerId);
         ArgumentException.ThrowIfNullOrEmpty(connectionString);
 
-        return services.AddKeyedSingleton<ISourceProvider>(providerId, (_, key) =>
-        {
-            if (key is not string keyRaw)
-                throw new InvalidCastException();
-
-            return new NpgsqlOperations(keyRaw, connectionString);
-        });
+        return services.AddKeyedSingleton<ISourceProvider>(providerId, (_, _) =>
+            new NpgsqlOperations(providerId, connectionString)
+        );
     }
 
     public static IServiceCollection AddNpgsqlSource(this IServiceCollection services, string providerId, Action<NpgsqlDataSourceBuilder> configure)
@@ -56,16 +49,13 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configure);
         ArgumentException.ThrowIfNullOrEmpty(providerId);
 
-        return services.AddKeyedSingleton<ISourceProvider>(providerId, (_, key) =>
+        return services.AddKeyedSingleton<ISourceProvider>(providerId, (_, _) =>
         {
-            if (key is not string keyRaw)
-                throw new InvalidCastException();
-
             var dataSourceBuilder = new NpgsqlDataSourceBuilder();
             configure(dataSourceBuilder);
             var dataSource = dataSourceBuilder.Build();
 
-            return new NpgsqlOperations(keyRaw, dataSource);
+            return new NpgsqlOperations(providerId, dataSource);
         });
     }
 }

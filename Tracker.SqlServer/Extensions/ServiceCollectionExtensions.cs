@@ -9,46 +9,27 @@ namespace Tracker.SqlServer.Extensions;
 public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddSqlServerProvider(
-        this IServiceCollection services, string sourceId, string connectionString, TrackingMode mode = default)
+        this IServiceCollection services, string providerId, string connectionString, TrackingMode mode = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(sourceId);
+        ArgumentException.ThrowIfNullOrEmpty(providerId);
         ArgumentException.ThrowIfNullOrEmpty(connectionString);
 
         Func<IServiceProvider, ISourceProvider> factory = mode switch
         {
-            TrackingMode.DbIndexUsageStats => (_) => new SqlServerIndexUsageOperations(sourceId, connectionString),
-            TrackingMode.ChangeTracking => (_) => new SqlServerChangeTrackingOperations(sourceId, connectionString),
+            TrackingMode.DbIndexUsageStats => (_) => new SqlServerIndexUsageOperations(providerId, connectionString),
+            TrackingMode.ChangeTracking => (_) => new SqlServerChangeTrackingOperations(providerId, connectionString),
             _ => throw new InvalidOperationException()
         };
 
-        return services.AddKeyedSingleton(sourceId, factory);
+        return services.AddKeyedSingleton(providerId, factory);
     }
 
     public static IServiceCollection AddSqlServerProvider<TContext>(this IServiceCollection services, TrackingMode mode = default)
          where TContext : DbContext
     {
         var contextFullName = typeof(TContext).FullName;
-
         ArgumentException.ThrowIfNullOrEmpty(contextFullName);
-
-        return services.AddKeyedSingleton<ISourceProvider>(contextFullName, (provider, key) =>
-        {
-            using var scope = provider.CreateScope();
-
-            using var dbContext = scope.ServiceProvider.GetRequiredService<TContext>();
-            var connectionString = dbContext.Database.GetConnectionString() ??
-                throw new NullReferenceException($"Connection string is not found for context {typeof(TContext).FullName}.");
-
-            if (key is not string keyRaw)
-                throw new InvalidCastException();
-
-            return mode switch
-            {
-                TrackingMode.DbIndexUsageStats => new SqlServerIndexUsageOperations(keyRaw, connectionString),
-                TrackingMode.ChangeTracking => new SqlServerChangeTrackingOperations(keyRaw, connectionString),
-                _ => throw new InvalidOperationException()
-            };
-        });
+        return services.AddSqlServerProvider<TContext>(contextFullName, mode);
     }
 
     public static IServiceCollection AddSqlServerProvider<TContext>(this IServiceCollection services, string providerId, TrackingMode mode = default)
@@ -64,13 +45,10 @@ public static class ServiceCollectionExtensions
             var connectionString = dbContext.Database.GetConnectionString() ??
                 throw new NullReferenceException($"Connection string is not found for context {typeof(TContext).FullName}.");
 
-            if (key is not string keyRaw)
-                throw new InvalidCastException();
-
             return mode switch
             {
-                TrackingMode.DbIndexUsageStats => new SqlServerIndexUsageOperations(keyRaw, connectionString),
-                TrackingMode.ChangeTracking => new SqlServerChangeTrackingOperations(keyRaw, connectionString),
+                TrackingMode.DbIndexUsageStats => new SqlServerIndexUsageOperations(providerId, connectionString),
+                TrackingMode.ChangeTracking => new SqlServerChangeTrackingOperations(providerId, connectionString),
                 _ => throw new InvalidOperationException()
             };
         });
