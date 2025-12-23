@@ -37,7 +37,7 @@ public static class ServiceCollectionExtensions
     {
         ArgumentException.ThrowIfNullOrEmpty(providerId, nameof(providerId));
 
-        return services.AddKeyedSingleton<ISourceProvider>(providerId, (provider, key) =>
+        return services.AddKeyedSingleton<ISourceProvider>(providerId, (provider, _) =>
         {
             using var scope = provider.CreateScope();
 
