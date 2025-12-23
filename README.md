@@ -9,7 +9,7 @@
 - [ ] **Add track attribute full options support through constructor**
   - [ ] Design new attribute configuration interface
   - [ ] Add validation logic for all services 
-  - [ ] Add unit tests for new options
+  - [ ] Make possible to register source provider not as singleton
 
 ### ⚡ **Optimization**
 - [ ] Profile current performance bottlenecks
