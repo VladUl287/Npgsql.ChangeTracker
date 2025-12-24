@@ -1,8 +1,8 @@
 ﻿namespace Tracker.Core.Extensions;
 
-public static class UlongExtensions
+internal static class UlongExtensions
 {
-    public static int CountDigits(this ulong n)
+    internal static int CountDigits(this ulong n)
     {
         return n switch
         {

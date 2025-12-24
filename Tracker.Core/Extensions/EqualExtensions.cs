@@ -1,10 +1,10 @@
 ﻿namespace Tracker.Core.Extensions;
 
-public static class EqualExtensions
+internal static class EqualExtensions
 {
     private static readonly int ULongMaxLength = ulong.MaxValue.ToString().Length;
 
-    public static bool EqualsULong(this ReadOnlySpan<char> chars, ulong number)
+    internal static bool EqualsULong(this ReadOnlySpan<char> chars, ulong number)
     {
         if (chars.Length == 0 || chars.Length > ULongMaxLength)
             return false;
