@@ -1,6 +1,6 @@
 ﻿namespace Tracker.Core.Extensions;
 
-internal static class UlongExtensions
+internal static class ULongExtensions
 {
     private const int ULongMaxLength = 20;
 
