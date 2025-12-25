@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Tracker.Core.Services.Contracts;
-using Tracker.SqlServer.Models;
+﻿using Tracker.SqlServer.Models;
 using Tracker.SqlServer.Services;
+using Microsoft.EntityFrameworkCore;
+using Tracker.Core.Services.Contracts;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Tracker.SqlServer.Extensions;
 
@@ -21,7 +21,9 @@ public static class ServiceCollectionExtensions
             _ => throw new InvalidOperationException()
         };
 
-        return services.AddKeyedSingleton(providerId, factory);
+        return services
+            .AddSingleton(factory)
+            .AddKeyedSingleton(providerId, factory);
     }
 
     public static IServiceCollection AddSqlServerProvider<TContext>(this IServiceCollection services, TrackingMode mode = default)
@@ -37,7 +39,7 @@ public static class ServiceCollectionExtensions
     {
         ArgumentException.ThrowIfNullOrEmpty(providerId, nameof(providerId));
 
-        return services.AddKeyedSingleton<ISourceProvider>(providerId, (provider, _) =>
+        ISourceProvider factory(IServiceProvider provider)
         {
             using var scope = provider.CreateScope();
 
@@ -51,6 +53,10 @@ public static class ServiceCollectionExtensions
                 TrackingMode.ChangeTracking => new SqlServerChangeTrackingOperations(providerId, connectionString),
                 _ => throw new InvalidOperationException()
             };
-        });
+        }
+
+        return services
+            .AddSingleton(factory)
+            .AddKeyedSingleton(providerId, (provider, _) => factory(provider));
     }
 }

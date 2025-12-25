@@ -1,9 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Npgsql;
+using Tracker.Npgsql.Services;
+using Microsoft.EntityFrameworkCore;
+using Tracker.Core.Services.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Npgsql;
-using Tracker.Core.Services.Contracts;
-using Tracker.Npgsql.Services;
 
 namespace Tracker.Npgsql.Extensions;
 
@@ -22,7 +22,7 @@ public static class ServiceCollectionExtensions
     {
         ArgumentException.ThrowIfNullOrEmpty(providerId);
 
-        return services.AddKeyedSingleton<ISourceProvider>(providerId, (provider, _) =>
+        ISourceProvider factory(IServiceProvider provider)
         {
             using var scope = provider.CreateScope();
 
@@ -31,7 +31,11 @@ public static class ServiceCollectionExtensions
                 throw new NullReferenceException($"Connection string is not found for context {typeof(TContext).FullName}.");
 
             return new NpgsqlOperations(providerId, connectionString);
-        });
+        }
+
+        return services
+            .AddSingleton(factory)
+            .AddKeyedSingleton(providerId, (provider, _) => factory(provider));
     }
 
     public static IServiceCollection AddNpgsqlProvider(this IServiceCollection services, string providerId, string connectionString)
@@ -39,9 +43,9 @@ public static class ServiceCollectionExtensions
         ArgumentException.ThrowIfNullOrEmpty(providerId);
         ArgumentException.ThrowIfNullOrEmpty(connectionString);
 
-        return services.AddKeyedSingleton<ISourceProvider>(providerId, (_, _) =>
-            new NpgsqlOperations(providerId, connectionString)
-        );
+        return services
+            .AddSingleton<ISourceProvider>((_) => new NpgsqlOperations(providerId, connectionString))
+            .AddKeyedSingleton<ISourceProvider>(providerId, (_, _) => new NpgsqlOperations(providerId, connectionString));
     }
 
     public static IServiceCollection AddNpgsqlSource(this IServiceCollection services, string providerId, Action<NpgsqlDataSourceBuilder> configure)
@@ -49,13 +53,17 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configure);
         ArgumentException.ThrowIfNullOrEmpty(providerId);
 
-        return services.AddKeyedSingleton<ISourceProvider>(providerId, (_, _) =>
+        ISourceProvider factory(Action<NpgsqlDataSourceBuilder> configure)
         {
             var dataSourceBuilder = new NpgsqlDataSourceBuilder();
             configure(dataSourceBuilder);
             var dataSource = dataSourceBuilder.Build();
 
             return new NpgsqlOperations(providerId, dataSource);
-        });
+        }
+
+        return services
+            .AddSingleton((_) => factory(configure))
+            .AddKeyedSingleton(providerId, (_, _) => factory(configure));
     }
 }
