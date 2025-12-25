@@ -11,17 +11,17 @@ using Tracker.Core.Services.Contracts;
 namespace Tracker.Benchmarks;
 
 [MemoryDiagnoser]
-public class TrackerMiddlewareFlterBenchmark
+public class TrackerMiddlewareBenchmark
 {
     private static readonly ImmutableGlobalOptions emptyGlobalOptions = new()
     {
-        Tables = ["roles"]
+        Tables = ["roles"],
+        SourceProvider = new BenchmarkOperationsProvider()
     };
     private TrackerMiddleware trackerMiddleware;
     private HttpContext httpContext;
     private HttpContext httpContextNotModified;
-    private HttpContext httpContextPostMethod;
-    private HttpContext httpContextResponseImmutable;
+    private HttpContext httpContextNotEqualEtag;
 
     [IterationSetup]
     public void Setup()
@@ -31,36 +31,33 @@ public class TrackerMiddlewareFlterBenchmark
 
         var loggerFactory = LoggerFactory.Create(builder =>
         {
-            builder.AddConsole();
             builder.SetMinimumLevel(LogLevel.Error);
         });
 
-        var loggerHandler = loggerFactory.CreateLogger<DefaultRequestHandler>();
-        //var defaultRequestHandler = new DefaultRequestHandler(
-        //    etagProvider, timestampHasher, loggerHandler);
-
         var logger = loggerFactory.CreateLogger<DefaultRequestFilter>();
         var requestFilter = new DefaultRequestFilter(logger);
+
+        var providerResolverLogger = loggerFactory.CreateLogger<DefaultProviderResolver>();
+        var providerResolver = new DefaultProviderResolver(providerResolverLogger);
+        var loggerHandler = loggerFactory.CreateLogger<DefaultRequestHandler>();
+        var requestHandler = new DefaultRequestHandler(etagProvider, providerResolver, timestampHasher, loggerHandler);
 
         loggerFactory.Dispose();
 
         static Task next(HttpContext ctx) => Task.CompletedTask;
 
-        //trackerMiddleware = new(next, requestFilter, defaultRequestHandler, emptyGlobalOptions);
+        trackerMiddleware = new(next, requestFilter, requestHandler, emptyGlobalOptions);
 
         httpContext = new DefaultHttpContext();
         httpContext.Request.Method = HttpMethods.Get;
-
-        httpContextPostMethod = new DefaultHttpContext();
-        httpContextPostMethod.Request.Method = HttpMethods.Post;
 
         httpContextNotModified = new DefaultHttpContext();
         httpContextNotModified.Request.Method = HttpMethods.Get;
         httpContextNotModified.Request.Headers.IfNoneMatch = "638081280000000000-638081280000000000";
 
-        httpContextResponseImmutable = new DefaultHttpContext();
-        httpContextResponseImmutable.Request.Method = HttpMethods.Get;
-        httpContextResponseImmutable.Response.Headers.CacheControl = "immutable";
+        httpContextNotEqualEtag = new DefaultHttpContext();
+        httpContextNotEqualEtag.Request.Method = HttpMethods.Get;
+        httpContextNotEqualEtag.Request.Headers.IfNoneMatch = "638081280000000000-638081280000000001";
     }
 
     [Benchmark]
@@ -70,10 +67,7 @@ public class TrackerMiddlewareFlterBenchmark
     public Task Middleware_NotModified() => trackerMiddleware.InvokeAsync(httpContextNotModified);
 
     [Benchmark]
-    public Task Middleware_PostMethod() => trackerMiddleware.InvokeAsync(httpContextPostMethod);
-
-    [Benchmark]
-    public Task Middleware_ResponseImmutable() => trackerMiddleware.InvokeAsync(httpContextResponseImmutable);
+    public Task Middleware_NotEqualEtag() => trackerMiddleware.InvokeAsync(httpContextNotEqualEtag);
 
     private sealed class BenchAssemblyProvider : IAssemblyTimestampProvider
     {
