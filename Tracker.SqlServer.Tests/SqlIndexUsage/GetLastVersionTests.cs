@@ -5,6 +5,7 @@ using Tracker.SqlServer.Tests.Utils;
 
 namespace Tracker.SqlServer.Tests.SqlIndexUsage;
 
+[Collection("SqlServerIndexUsageStatsCollections")]
 public class GetLastVersionTests : IAsyncLifetime
 {
     private readonly string _connectionString;

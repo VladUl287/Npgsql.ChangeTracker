@@ -5,7 +5,7 @@ using Tracker.SqlServer.Tests.Utils;
 
 namespace Tracker.SqlServer.Tests.SqlChangeTrackigng;
 
-[Collection("SqlServerChangeTrackingTestsSequentialCollection")]
+[Collection("SqlServerChangeTrackingCollection")]
 public class CommonChangeTrackingTests : IAsyncLifetime
 {
     private readonly string _connectionString;
