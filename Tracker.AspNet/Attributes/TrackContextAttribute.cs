@@ -11,7 +11,7 @@ namespace Tracker.AspNet.Attributes;
 public sealed class TrackAttribute<TContext>(
     string[]? tables = null,
     Type[]? entities = null,
-    string? sourceId = null,
+    string? providerId = null,
     string? cacheControl = null) : TrackAttributeBase where TContext : DbContext
 {
     private ImmutableGlobalOptions? _actionOptions;
@@ -35,7 +35,7 @@ public sealed class TrackAttribute<TContext>(
 
             _actionOptions = options with
             {
-                ProviderId = sourceId ?? typeof(TContext).FullName ?? options.ProviderId,
+                ProviderId = providerId ?? typeof(TContext).FullName ?? options.ProviderId,
                 CacheControl = cacheControl ?? options.CacheControl,
                 Tables = ResolveTables(tables, entities, serviceProvider, options),
             };

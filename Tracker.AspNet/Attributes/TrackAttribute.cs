@@ -9,7 +9,7 @@ namespace Tracker.AspNet.Attributes;
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
 public sealed class TrackAttribute(
     string[]? tables = null,
-    string? sourceId = null,
+    string? providerId = null,
     string? cacheControl = null) : TrackAttributeBase
 {
     private ImmutableGlobalOptions? _actionOptions;
@@ -33,7 +33,7 @@ public sealed class TrackAttribute(
 
             _actionOptions = options with
             {
-                ProviderId = sourceId ?? options.ProviderId,
+                ProviderId = providerId ?? options.ProviderId,
                 Tables = ResolveTables(tables, options),
                 CacheControl = cacheControl ?? options.CacheControl,
             };
