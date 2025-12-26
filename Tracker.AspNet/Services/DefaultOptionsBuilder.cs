@@ -1,14 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Tracker.AspNet.Models;
-using Tracker.Core.Extensions;
 using System.Runtime.CompilerServices;
 using Tracker.AspNet.Services.Contracts;
 using Tracker.AspNet.Utils;
+using Tracker.Core.Services.Contracts;
 
 namespace Tracker.AspNet.Services;
 
-public sealed class DefaultOptionsBuilder(IServiceScopeFactory scopeFactory) : IOptionsBuilder<GlobalOptions, ImmutableGlobalOptions>
+public sealed class DefaultOptionsBuilder(IServiceScopeFactory scopeFactory, ITableNameResolver tableNameResolver) :
+    IOptionsBuilder<GlobalOptions, ImmutableGlobalOptions>
 {
     private static readonly string _defaultCacheControl = new CacheControlBuilder().WithNoCache().Combine();
 
@@ -18,11 +19,11 @@ public sealed class DefaultOptionsBuilder(IServiceScopeFactory scopeFactory) : I
         {
             Suffix = options.Suffix,
             Filter = options.Filter,
-            Tables = [.. options.Tables],
             ProviderId = options.ProviderId,
             SourceProvider = options.SourceProvider,
             CacheControl = ResolveCacheControl(options),
             SourceProviderFactory = options.SourceProviderFactory,
+            Tables = options.Tables is not null ? [.. options.Tables] : [],
             InvalidRequestDirectives = options.InvalidRequestDirectives is not null ? [.. options.InvalidRequestDirectives] : [],
             InvalidResponseDirectives = options.InvalidResponseDirectives is not null ? [.. options.InvalidResponseDirectives] : [],
         };
@@ -35,7 +36,7 @@ public sealed class DefaultOptionsBuilder(IServiceScopeFactory scopeFactory) : I
         var context = scope.ServiceProvider.GetRequiredService<TContext>();
         var tables = new HashSet<string>([
             .. options.Tables ?? [],
-            .. context.GetTablesNames(options.Entities ?? [])
+            .. tableNameResolver.GetTablesNames(context, options.Entities ?? [])
         ]);
 
         return new ImmutableGlobalOptions

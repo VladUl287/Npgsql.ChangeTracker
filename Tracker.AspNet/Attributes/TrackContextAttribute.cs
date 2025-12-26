@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Immutable;
 using Tracker.AspNet.Models;
-using Tracker.Core.Extensions;
+using Tracker.Core.Services.Contracts;
 
 namespace Tracker.AspNet.Attributes;
 
@@ -31,13 +31,14 @@ public sealed class TrackAttribute<TContext>(
             using var scope = scopeFactory.CreateScope();
 
             var serviceProvider = scope.ServiceProvider;
+            var tableNameResolver = serviceProvider.GetRequiredService<ITableNameResolver>();
             var options = serviceProvider.GetRequiredService<ImmutableGlobalOptions>();
 
             _actionOptions = options with
             {
                 ProviderId = providerId ?? typeof(TContext).FullName ?? options.ProviderId,
                 CacheControl = cacheControl ?? options.CacheControl,
-                Tables = ResolveTables(tables, entities, serviceProvider, options),
+                Tables = ResolveTables(tables, entities, serviceProvider, tableNameResolver, options),
             };
 
             return _actionOptions;
@@ -45,14 +46,14 @@ public sealed class TrackAttribute<TContext>(
     }
 
     private static ImmutableArray<string> ResolveTables(
-        string[]? tables, Type[]? entities, IServiceProvider services, ImmutableGlobalOptions options)
+        string[]? tables, Type[]? entities, IServiceProvider services, ITableNameResolver tableNameResolver, ImmutableGlobalOptions options)
     {
         var tablesNames = new HashSet<string>(tables ?? []);
 
         if (entities is { Length: > 0 })
         {
             var dbContext = services.GetRequiredService<TContext>();
-            foreach (var tableName in dbContext.GetTablesNames(entities))
+            foreach (var tableName in tableNameResolver.GetTablesNames(dbContext, entities))
                 tablesNames.Add(tableName);
         }
 

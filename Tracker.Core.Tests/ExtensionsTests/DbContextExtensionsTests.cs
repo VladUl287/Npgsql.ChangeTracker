@@ -1,10 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Tracker.Core.Extensions;
+using Tracker.Core.Services;
 
 namespace Tracker.Core.Tests.ExtensionsTests;
 
 public class DbContextExtensionsTests
 {
+    private static readonly DefaultTableNameResolver defaultTableNameResolver = new DefaultTableNameResolver();
+
     [Fact]
     public void Null_Context()
     {
@@ -15,7 +17,7 @@ public class DbContextExtensionsTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>("context", () =>
         {
-            dbContext.GetTablesNames(types).ToArray();
+            defaultTableNameResolver.GetTablesNames(dbContext, types).ToArray();
         });
     }
 
@@ -29,7 +31,7 @@ public class DbContextExtensionsTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>("entities", () =>
         {
-            dbContext.GetTablesNames(types).ToArray();
+            defaultTableNameResolver.GetTablesNames(dbContext, types).ToArray();
         });
     }
 
@@ -43,7 +45,7 @@ public class DbContextExtensionsTests
         // Act & Assert
         Assert.Throws<NullReferenceException>(() =>
         {
-            dbContext.GetTablesNames(types).ToArray();
+            defaultTableNameResolver.GetTablesNames(dbContext, types).ToArray();
         });
     }
 
@@ -57,7 +59,7 @@ public class DbContextExtensionsTests
         // Act & Assert
         Assert.Throws<NullReferenceException>(() =>
         {
-            dbContext.GetTablesNames(types).ToArray();
+            defaultTableNameResolver.GetTablesNames(dbContext, types).ToArray();
         });
     }
 
@@ -69,7 +71,7 @@ public class DbContextExtensionsTests
         var dbContext = new TestDbContext(_dbContextOptions);
 
         //Act
-        var tables = dbContext.GetTablesNames(types);
+        var tables = defaultTableNameResolver.GetTablesNames(dbContext, types);
 
         // Assert
         Assert.Equal(tables, ["Roles"]);
@@ -83,7 +85,7 @@ public class DbContextExtensionsTests
         var dbContext = new ConfiguredTestDbContext(_dbContextOptions);
 
         //Act
-        var tables = dbContext.GetTablesNames(types);
+        var tables = defaultTableNameResolver.GetTablesNames(dbContext, types);
 
         // Assert
         Assert.Equal(tables, ["roles"]);
@@ -97,7 +99,7 @@ public class DbContextExtensionsTests
         var dbContext = new ConfiguredTestDbContext(_dbContextOptions);
 
         //Act
-        var tables = dbContext.GetTablesNames(types).ToArray();
+        var tables = defaultTableNameResolver.GetTablesNames(dbContext, types).ToArray();
 
         // Assert
         Assert.Equal(tables, new string[] { "roles", "Users" });

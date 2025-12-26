@@ -1,10 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Tracker.Core.Services.Contracts;
 
-namespace Tracker.Core.Extensions;
+namespace Tracker.Core.Services;
 
-public static class DbContextExtensions
+public sealed class DefaultTableNameResolver : ITableNameResolver
 {
-    public static IEnumerable<string> GetTablesNames<TContext>(this TContext context, Type[] entities) where TContext : DbContext
+    public IEnumerable<string> GetTablesNames<TContext>(TContext context, Type[] entities) 
+        where TContext : DbContext
     {
         ArgumentNullException.ThrowIfNull(context, nameof(context));
         ArgumentNullException.ThrowIfNull(entities, nameof(entities));
