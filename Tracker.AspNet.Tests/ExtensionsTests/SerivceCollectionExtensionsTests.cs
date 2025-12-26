@@ -20,6 +20,7 @@ public class ServiceCollectionExtensionsTests
 
         // Act
         var result = ServiceCollectionExtensions.AddTracker(services);
+        services.AddLogging();
 
         // Assert
         Assert.Same(services, result);
@@ -47,14 +48,13 @@ public class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
         var options = new GlobalOptions();
 
-        // Register mock options builder to verify Build is called
+        var result = ServiceCollectionExtensions.AddTracker(services, options);
         var mockOptionsBuilder = new Mock<IOptionsBuilder<GlobalOptions, ImmutableGlobalOptions>>();
         mockOptionsBuilder.Setup(b => b.Build(It.IsAny<GlobalOptions>()))
             .Returns(new ImmutableGlobalOptions());
         services.AddSingleton(mockOptionsBuilder.Object);
 
         // Act
-        var result = ServiceCollectionExtensions.AddTracker(services, options);
         var provider = services.BuildServiceProvider();
         provider.GetService<ImmutableGlobalOptions>();
 
@@ -81,7 +81,7 @@ public class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
         var options = new GlobalOptions();
 
-        // Register a mock options builder that returns a specific instance
+        ServiceCollectionExtensions.AddTracker(services, options);
         var expectedImmutableOptions = new ImmutableGlobalOptions();
         var mockOptionsBuilder = new Mock<IOptionsBuilder<GlobalOptions, ImmutableGlobalOptions>>();
         mockOptionsBuilder.Setup(b => b.Build(It.IsAny<GlobalOptions>()))
@@ -89,7 +89,6 @@ public class ServiceCollectionExtensionsTests
         services.AddSingleton(mockOptionsBuilder.Object);
 
         // Act
-        ServiceCollectionExtensions.AddTracker(services, options);
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert
@@ -104,17 +103,19 @@ public class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
         bool wasConfigured = false;
 
-        // Register mock options builder
+        var result = ServiceCollectionExtensions.AddTracker(services, options =>
+        {
+            wasConfigured = true;
+        });
+
         var mockOptionsBuilder = new Mock<IOptionsBuilder<GlobalOptions, ImmutableGlobalOptions>>();
         mockOptionsBuilder.Setup(b => b.Build(It.IsAny<GlobalOptions>()))
             .Returns(new ImmutableGlobalOptions());
         services.AddSingleton(mockOptionsBuilder.Object);
 
         // Act
-        var result = ServiceCollectionExtensions.AddTracker(services, options =>
-        {
-            wasConfigured = true;
-        });
+        var serviceProvider = services.BuildServiceProvider();
+        var actualOptions = serviceProvider.GetService<ImmutableGlobalOptions>();
 
         // Assert
         Assert.Same(services, result);
@@ -144,7 +145,6 @@ public class ServiceCollectionExtensionsTests
         mockOptionsBuilder.Setup(b => b.Build(It.IsAny<GlobalOptions>()))
             .Returns(new ImmutableGlobalOptions())
             .Callback<GlobalOptions>(opts => capturedOptions = opts);
-        services.AddSingleton(mockOptionsBuilder.Object);
 
         // Act
         ServiceCollectionExtensions.AddTracker(services, options =>
@@ -152,10 +152,12 @@ public class ServiceCollectionExtensionsTests
             // Modify options to verify they're being used
             // Add properties to GlobalOptions if needed for testing
         });
+        services.AddSingleton(mockOptionsBuilder.Object);
+        var serviceProvider = services.BuildServiceProvider();
+        var actualOptions = serviceProvider.GetService<ImmutableGlobalOptions>();
 
         // Assert
         Assert.NotNull(capturedOptions);
-        // Verify it's a new instance, not some shared one
         Assert.IsType<GlobalOptions>(capturedOptions);
     }
 
@@ -179,9 +181,12 @@ public class ServiceCollectionExtensionsTests
         var mockOptionsBuilder = new Mock<IOptionsBuilder<GlobalOptions, ImmutableGlobalOptions>>();
         mockOptionsBuilder.Setup(b => b.Build<TestDbContext>(It.IsAny<GlobalOptions>()))
             .Returns(new ImmutableGlobalOptions());
-        services.AddSingleton(mockOptionsBuilder.Object);
 
         ServiceCollectionExtensions.AddTracker<TestDbContext>(services);
+        services.AddSingleton(mockOptionsBuilder.Object);
+        serviceProvider = services.BuildServiceProvider();
+        var actualOptions = serviceProvider.GetService<ImmutableGlobalOptions>();
+
         mockOptionsBuilder.Verify(b => b.Build<TestDbContext>(It.IsAny<GlobalOptions>()), Times.Once);
     }
 
@@ -195,10 +200,12 @@ public class ServiceCollectionExtensionsTests
         var mockOptionsBuilder = new Mock<IOptionsBuilder<GlobalOptions, ImmutableGlobalOptions>>();
         mockOptionsBuilder.Setup(b => b.Build<TestDbContext>(It.IsAny<GlobalOptions>()))
             .Returns(new ImmutableGlobalOptions());
-        services.AddSingleton(mockOptionsBuilder.Object);
 
         // Act
         var result = ServiceCollectionExtensions.AddTracker<TestDbContext>(services, options);
+        services.AddSingleton(mockOptionsBuilder.Object);
+        var serviceProvider = services.BuildServiceProvider();
+        var actualOptions = serviceProvider.GetService<ImmutableGlobalOptions>();
 
         // Assert
         Assert.Same(services, result);
@@ -226,10 +233,12 @@ public class ServiceCollectionExtensionsTests
         var mockOptionsBuilder = new Mock<IOptionsBuilder<GlobalOptions, ImmutableGlobalOptions>>();
         mockOptionsBuilder.Setup(b => b.Build<TestDbContext>(It.IsAny<GlobalOptions>()))
             .Returns(new ImmutableGlobalOptions());
-        services.AddSingleton(mockOptionsBuilder.Object);
 
         // Act
         ServiceCollectionExtensions.AddTracker<TestDbContext>(services, options);
+        services.AddSingleton(mockOptionsBuilder.Object);
+        var serviceProvider = services.BuildServiceProvider();
+        var actualOptions = serviceProvider.GetService<ImmutableGlobalOptions>();
 
         // Assert
         // Verify that the generic Build method was called, not the non-generic one
@@ -247,13 +256,15 @@ public class ServiceCollectionExtensionsTests
         var mockOptionsBuilder = new Mock<IOptionsBuilder<GlobalOptions, ImmutableGlobalOptions>>();
         mockOptionsBuilder.Setup(b => b.Build<TestDbContext>(It.IsAny<GlobalOptions>()))
             .Returns(new ImmutableGlobalOptions());
-        services.AddSingleton(mockOptionsBuilder.Object);
 
         // Act
         var result = ServiceCollectionExtensions.AddTracker<TestDbContext>(services, options =>
         {
             wasConfigured = true;
         });
+        services.AddSingleton(mockOptionsBuilder.Object);
+        var serviceProvider = services.BuildServiceProvider();
+        var actualOptions = serviceProvider.GetService<ImmutableGlobalOptions>();
 
         // Assert
         Assert.Same(services, result);
@@ -283,13 +294,15 @@ public class ServiceCollectionExtensionsTests
         mockOptionsBuilder.Setup(b => b.Build<TestDbContext>(It.IsAny<GlobalOptions>()))
             .Returns(new ImmutableGlobalOptions())
             .Callback<GlobalOptions>(opts => capturedOptions = opts);
-        services.AddSingleton(mockOptionsBuilder.Object);
 
         // Act
         ServiceCollectionExtensions.AddTracker<TestDbContext>(services, options =>
         {
             // Configure options
         });
+        services.AddSingleton(mockOptionsBuilder.Object);
+        var serviceProvider = services.BuildServiceProvider();
+        var actualOptions = serviceProvider.GetService<ImmutableGlobalOptions>();
 
         // Assert
         mockOptionsBuilder.Verify(b => b.Build<TestDbContext>(It.IsAny<GlobalOptions>()), Times.Once);
@@ -395,10 +408,12 @@ public class ServiceCollectionExtensionsTests
         var mockOptionsBuilder = new Mock<IOptionsBuilder<GlobalOptions, ImmutableGlobalOptions>>();
         mockOptionsBuilder.Setup(b => b.Build<CustomDbContext>(It.IsAny<GlobalOptions>()))
             .Returns(new ImmutableGlobalOptions());
-        services.AddSingleton(mockOptionsBuilder.Object);
 
         // Act
         ServiceCollectionExtensions.AddTracker<CustomDbContext>(services);
+        services.AddSingleton(mockOptionsBuilder.Object);
+        var serviceProvider = services.BuildServiceProvider();
+        var actualOptions = serviceProvider.GetService<ImmutableGlobalOptions>();
         services.AddLogging();
 
         // Assert
