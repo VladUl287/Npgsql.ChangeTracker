@@ -1,13 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System.Collections.Immutable;
-using System.Runtime.CompilerServices;
-using Tracker.AspNet.Logging;
 using Tracker.AspNet.Models;
+using Tracker.Core.Extensions;
+using System.Runtime.CompilerServices;
 using Tracker.AspNet.Services.Contracts;
 using Tracker.AspNet.Utils;
-using Tracker.Core.Extensions;
 
 namespace Tracker.AspNet.Services;
 
@@ -17,22 +14,17 @@ public sealed class GlobalOptionsBuilder(IServiceScopeFactory scopeFactory) : IO
 
     public ImmutableGlobalOptions Build(GlobalOptions options)
     {
-        using var scope = scopeFactory.CreateScope();
-
-        var providerSelector = scope.ServiceProvider.GetRequiredService<IProviderResolver>();
-
         return new ImmutableGlobalOptions
         {
-            ProviderId = options.ProviderId,
-            SourceProvider = options.SourceProvider,
-            SourceProviderFactory = options.SourceProviderFactory,
-
             Suffix = options.Suffix,
             Filter = options.Filter,
-            InvalidRequestDirectives = [.. options.InvalidRequestDirectives],
-            InvalidResponseDirectives = [.. options.InvalidResponseDirectives],
             Tables = [.. options.Tables],
+            ProviderId = options.ProviderId,
+            SourceProvider = options.SourceProvider,
             CacheControl = ResolveCacheControl(options),
+            SourceProviderFactory = options.SourceProviderFactory,
+            InvalidRequestDirectives = options.InvalidRequestDirectives is not null ? [.. options.InvalidRequestDirectives] : [],
+            InvalidResponseDirectives = options.InvalidResponseDirectives is not null ? [.. options.InvalidResponseDirectives] : [],
         };
     }
 
@@ -40,42 +32,27 @@ public sealed class GlobalOptionsBuilder(IServiceScopeFactory scopeFactory) : IO
     {
         using var scope = scopeFactory.CreateScope();
 
-        var dbContext = scope.ServiceProvider.GetRequiredService<TContext>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<GlobalOptionsBuilder>>();
-
-        var tables = GetAndCombineTablesNames(options, dbContext, logger);
+        var context = scope.ServiceProvider.GetRequiredService<TContext>();
+        var tables = new HashSet<string>([
+            .. options.Tables ?? [],
+            .. context.GetTablesNames(options.Entities ?? [])
+        ]);
 
         return new ImmutableGlobalOptions
         {
-            ProviderId = options.ProviderId,
-            SourceProvider = options.SourceProvider,
-            SourceProviderFactory = options.SourceProviderFactory,
-
-            Tables = tables,
+            Tables = [.. tables],
             Suffix = options.Suffix,
             Filter = options.Filter,
-            InvalidRequestDirectives = [.. options.InvalidRequestDirectives],
-            InvalidResponseDirectives = [.. options.InvalidResponseDirectives],
+            ProviderId = options.ProviderId,
+            SourceProvider = options.SourceProvider,
             CacheControl = ResolveCacheControl(options),
+            SourceProviderFactory = options.SourceProviderFactory,
+            InvalidRequestDirectives = options.InvalidRequestDirectives is not null ? [.. options.InvalidRequestDirectives] : [],
+            InvalidResponseDirectives = options.InvalidResponseDirectives is not null ? [.. options.InvalidResponseDirectives] : [],
         };
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string ResolveCacheControl(GlobalOptions options) =>
         options.CacheControl ?? options.CacheControlBuilder?.Combine() ?? _defaultCacheControl;
-
-    private static ImmutableArray<string> GetAndCombineTablesNames<TContext>(
-        GlobalOptions options, TContext dbContext, ILogger<GlobalOptionsBuilder> logger) where TContext : DbContext
-    {
-        var tablesNames = new HashSet<string>();
-        foreach (var tableName in options.Tables ?? [])
-            if (!tablesNames.Add(tableName))
-                logger.LogOptionsTableNameDuplicated(tableName);
-
-        foreach (var tableName in dbContext.GetTablesNames(options.Entities ?? []))
-            if (!tablesNames.Add(tableName))
-                logger.LogOptionsTableNameDuplicated(tableName);
-
-        return [.. tablesNames];
-    }
 }
