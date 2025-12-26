@@ -1,8 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Tracker.AspNet.Models;
 using Tracker.AspNet.Services;
-using Tracker.AspNet.Tests.AttirubtesTests;
 using Tracker.Core.Services.Contracts;
 
 namespace Tracker.AspNet.Tests.ServicesTests;
@@ -10,337 +11,202 @@ namespace Tracker.AspNet.Tests.ServicesTests;
 public class DefaultProviderResolverTests
 {
     private readonly Mock<ILogger<DefaultProviderResolver>> _loggerMock;
+    private readonly DefaultProviderResolver _resolver;
 
     public DefaultProviderResolverTests()
     {
         _loggerMock = new Mock<ILogger<DefaultProviderResolver>>();
-    }
-
-    private Mock<ISourceProvider> CreateProviderMock(string id)
-    {
-        var mock = new Mock<ISourceProvider>();
-        mock.Setup(p => p.Id).Returns(id);
-        return mock;
-    }
-
-    private DefaultProviderResolver CreateResolver(ILogger<DefaultProviderResolver>? logger = null)
-    {
-        return new DefaultProviderResolver(logger ?? _loggerMock.Object);
+        _resolver = new DefaultProviderResolver(_loggerMock.Object);
     }
 
     [Fact]
-    public void Constructor_ShouldCreateStoreAndDefaultProvider()
+    public void ResolveProvider_ShouldThrowArgumentNullException_WhenHttpContextIsNull()
     {
+        // Arrange
+        var options = new ImmutableGlobalOptions();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(
+            () => _resolver.ResolveProvider(null, options, out _));
+    }
+
+    [Fact]
+    public void ResolveProvider_ShouldThrowArgumentNullException_WhenOptionsIsNull()
+    {
+        // Arrange
+        var httpContextMock = new Mock<HttpContext>();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(
+            () => _resolver.ResolveProvider(httpContextMock.Object, null, out _));
+    }
+
+    [Fact]
+    public void ResolveProvider_ShouldResolveKeyedProvider_WhenProviderIdIsSpecified()
+    {
+        // Arrange
+        var providerId = "TestProvider";
+        var options = new ImmutableGlobalOptions { ProviderId = providerId };
+        var expectedProvider = Mock.Of<ISourceProvider>();
+        var serviceProviderMock = new Mock<IServiceProvider>();
+        var httpContextMock = new Mock<HttpContext>();
+
+        serviceProviderMock
+            .As<IKeyedServiceProvider>()
+            .Setup(sp => sp.GetRequiredKeyedService(typeof(ISourceProvider), providerId))
+            .Returns(expectedProvider);
+
+        httpContextMock.Setup(ctx => ctx.RequestServices)
+            .Returns(serviceProviderMock.Object);
+
         // Act
-        var resolver = CreateResolver();
+        var result = _resolver.ResolveProvider(httpContextMock.Object, options, out var shouldDispose);
 
         // Assert
-        Assert.NotNull(resolver);
-
-        // Verify that all providers are accessible
-        var provider = resolver.ResolveProvider(null, new ImmutableGlobalOptions(), out var shouldDispose);
-        Assert.Equal("provider1", provider?.Id);
+        Assert.Equal(expectedProvider, result);
+        Assert.False(shouldDispose);
     }
 
-    public class SelectProviderWithProviderIdAndImmutableOptionsTests
+    [Fact]
+    public void ResolveProvider_ShouldThrowInvalidOperationException_WhenKeyedProviderResolutionFails()
     {
-        private readonly DefaultProviderResolverTests _fixture;
+        // Arrange
+        var providerId = "TestProvider";
+        var options = new ImmutableGlobalOptions { ProviderId = providerId };
+        var serviceProviderMock = new Mock<IServiceProvider>();
+        var httpContextMock = new Mock<HttpContext>();
+        var expectedException = new InvalidOperationException("Service not found");
 
-        public SelectProviderWithProviderIdAndImmutableOptionsTests()
-        {
-            _fixture = new DefaultProviderResolverTests();
-        }
+        serviceProviderMock
+            .As<IKeyedServiceProvider>()
+            .Setup(sp => sp.GetRequiredKeyedService(typeof(ISourceProvider), providerId))
+            .Throws(expectedException);
 
-        [Fact]
-        public void SelectProvider_WithValidProviderId_ShouldReturnProvider()
-        {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions();
+        httpContextMock.Setup(ctx => ctx.RequestServices)
+            .Returns(serviceProviderMock.Object);
 
-            // Act
-            var provider = resolver.ResolveProvider(null, new ImmutableGlobalOptions(), out var shouldDispose);
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => _resolver.ResolveProvider(httpContextMock.Object, options, out _));
 
-            // Assert
-            Assert.Equal("provider2", provider?.Id);
-        }
-
-        [Fact]
-        public void SelectProvider_WithInvalidProviderId_ShouldThrowException()
-        {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions();
-
-            // Act & Assert
-            var exception = Assert.Throws<InvalidOperationException>(
-                () => resolver.ResolveProvider(null, options, out var shouldDispose));
-
-            Assert.Contains("invalid-provider", exception.Message);
-        }
-
-        [Fact]
-        public void SelectProvider_WithNullProviderIdAndNoSourceOps_ShouldReturnDefault()
-        {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions
-            {
-                SourceProvider = null,
-                SourceProviderFactory = null
-            };
-
-            // Act
-            var result = resolver.ResolveProvider(null, options, out var shouldDispose);
-
-            // Assert
-            Assert.Equal("provider1", result?.Id); // First provider is default
-        }
-
-        [Fact]
-        public void SelectProvider_WithNullProviderIdAndSourceProviderInOptions_ShouldReturnFromOptions()
-        {
-            // Arrange
-            var customProvider = _fixture.CreateProviderMock("custom-provider").Object;
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions
-            {
-                SourceProvider = customProvider
-            };
-
-            // Act
-            var result = resolver.ResolveProvider(null, options, out var shouldDispose);
-
-            // Assert
-            Assert.Equal(customProvider, result);
-        }
+        Assert.Contains($"Failed to resolve source provider. TraceId:", exception.Message);
+        Assert.Equal(expectedException, exception.InnerException);
     }
 
-    public class SelectProviderWithGlobalOptionsTests
+    [Fact]
+    public void ResolveProvider_ShouldReturnDirectProviderInstance_WhenSourceProviderIsSpecified()
     {
-        private readonly DefaultProviderResolverTests _fixture;
+        // Arrange
+        var expectedProvider = Mock.Of<ISourceProvider>();
+        var options = new ImmutableGlobalOptions { SourceProvider = expectedProvider };
+        var httpContextMock = new Mock<HttpContext>();
 
-        public SelectProviderWithGlobalOptionsTests()
-        {
-            _fixture = new DefaultProviderResolverTests();
-        }
+        // Act
+        var result = _resolver.ResolveProvider(httpContextMock.Object, options, out var shouldDispose);
 
-        [Fact]
-        public void SelectProvider_WithValidSourceIdInGlobalOptions_ShouldReturnProvider()
-        {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions
-            {
-                ProviderId = "provider3"
-            };
-
-            // Act
-            var result = resolver.ResolveProvider(null, options, out var shouldDispose);
-
-            // Assert
-            Assert.Equal("provider3", result?.Id);
-        }
-
-        [Fact]
-        public void SelectProvider_WithInvalidSourceIdInGlobalOptions_ShouldThrowException()
-        {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions
-            {
-                ProviderId = "invalid-id"
-            };
-
-            // Act & Assert
-            var exception = Assert.Throws<InvalidOperationException>(
-                () => resolver.ResolveProvider(null, options, out var shouldDispose));
-
-            Assert.Contains("invalid-id", exception.Message);
-            Assert.Contains("Available provider IDs:", exception.Message);
-        }
-
-        [Fact]
-        public void SelectProvider_WithNoSourceIdAndNoOps_ShouldReturnDefault()
-        {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions
-            {
-                ProviderId = null,
-                SourceProvider = null,
-                SourceProviderFactory = null
-            };
-
-            // Act
-            var result = resolver.ResolveProvider(null, options, out var shouldDispose);
-
-            // Assert
-            Assert.Equal("provider1", result?.Id);
-        }
+        // Assert
+        Assert.Equal(expectedProvider, result);
+        Assert.False(shouldDispose);
     }
 
-    public class SelectProviderWithContextAndProviderIdTests
+    [Fact]
+    public void ResolveProvider_ShouldCreateProviderViaFactory_WhenSourceProviderFactoryIsSpecified()
     {
-        private readonly DefaultProviderResolverTests _fixture;
-
-        public SelectProviderWithContextAndProviderIdTests()
+        // Arrange
+        var expectedProvider = Mock.Of<ISourceProvider>();
+        var options = new ImmutableGlobalOptions
         {
-            _fixture = new DefaultProviderResolverTests();
-        }
+            SourceProviderFactory = ctx => expectedProvider
+        };
+        var httpContextMock = new Mock<HttpContext>();
 
-        [Fact]
-        public void SelectProvider_WithValidProviderIdAndContext_ShouldReturnProvider()
-        {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions();
+        // Act
+        var result = _resolver.ResolveProvider(httpContextMock.Object, options, out var shouldDispose);
 
-            // Act
-            var result = resolver.ResolveProvider(null, options, out var shouldDispose);
-
-            // Assert
-            Assert.Equal("provider2", result?.Id);
-        }
-
-        [Fact]
-        public void SelectProvider_WithInvalidProviderIdAndContext_ShouldThrowException()
-        {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions();
-
-            // Act & Assert
-            var exception = Assert.Throws<InvalidOperationException>(
-                () => resolver.ResolveProvider(null, options, out var shouldDispose));
-
-            Assert.Contains(nameof(TestDbContext), exception.Message);
-            Assert.Contains("invalid-id", exception.Message);
-        }
-
-        [Fact]
-        public void SelectProvider_WithNullProviderIdAndGeneratedIdFound_ShouldReturnGenerated()
-        {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions();
-
-            // Act
-            var result = resolver.ResolveProvider(null, options, out var shouldDispose);
-
-            // Assert
-            Assert.Equal("provider2", result?.Id);
-        }
-
-        [Fact]
-        public void SelectProvider_WithNullProviderIdGeneratedIdNotFoundNoOps_ShouldReturnDefault()
-        {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions
-            {
-                SourceProvider = null,
-                SourceProviderFactory = null
-            };
-
-            // Act
-            var result = resolver.ResolveProvider(null, options, out var shouldDispose);
-
-            // Assert
-            Assert.Equal("provider1", result?.Id);
-        }
+        // Assert
+        Assert.Equal(expectedProvider, result);
+        Assert.True(shouldDispose);
     }
 
-    public class SelectProviderWithContextAndGlobalOptionsTests
+    [Fact]
+    public void ResolveProvider_ShouldResolveLastRegisteredProvider_WhenNoOtherOptionsAreSpecified()
     {
-        private readonly DefaultProviderResolverTests _fixture;
+        // Arrange
+        var options = new ImmutableGlobalOptions();
+        var expectedProvider = Mock.Of<ISourceProvider>();
+        var serviceProviderMock = new Mock<IServiceProvider>();
+        var httpContextMock = new Mock<HttpContext>();
 
-        public SelectProviderWithContextAndGlobalOptionsTests()
+        serviceProviderMock
+            .Setup(sp => sp.GetService(typeof(ISourceProvider)))
+            .Returns(expectedProvider);
+
+        httpContextMock.Setup(ctx => ctx.RequestServices)
+            .Returns(serviceProviderMock.Object);
+
+        // Act
+        var result = _resolver.ResolveProvider(httpContextMock.Object, options, out var shouldDispose);
+
+        // Assert
+        Assert.Equal(expectedProvider, result);
+        Assert.False(shouldDispose);
+    }
+
+    [Fact]
+    public void ResolveProvider_ShouldPrioritizeProviderId_WhenMultipleOptionsAreSpecified()
+    {
+        // Arrange
+        var providerId = "TestProvider";
+        var directProvider = Mock.Of<ISourceProvider>();
+        var factoryProvider = Mock.Of<ISourceProvider>();
+
+        var options = new ImmutableGlobalOptions
         {
-            _fixture = new DefaultProviderResolverTests();
-        }
+            ProviderId = providerId,
+            SourceProvider = directProvider,
+            SourceProviderFactory = (ctx) => factoryProvider
+        };
 
-        [Fact]
-        public void SelectProvider_WithValidSourceIdInGlobalOptionsAndContext_ShouldReturnProvider()
+        var expectedProvider = Mock.Of<ISourceProvider>();
+        var serviceProviderMock = new Mock<IServiceProvider>();
+        var httpContextMock = new Mock<HttpContext>();
+
+        serviceProviderMock
+            .As<IKeyedServiceProvider>()
+            .Setup(sp => sp.GetRequiredKeyedService(typeof(ISourceProvider), providerId))
+            .Returns(expectedProvider);
+
+        httpContextMock.Setup(ctx => ctx.RequestServices)
+            .Returns(serviceProviderMock.Object);
+
+        // Act
+        var result = _resolver.ResolveProvider(httpContextMock.Object, options, out var shouldDispose);
+
+        // Assert
+        Assert.Equal(expectedProvider, result);
+        Assert.False(shouldDispose);
+    }
+
+    [Fact]
+    public void ResolveProvider_ShouldPrioritizeDirectProvider_WhenNoProviderIdButSourceProviderExists()
+    {
+        // Arrange
+        var expectedProvider = Mock.Of<ISourceProvider>();
+        var factoryProvider = Mock.Of<ISourceProvider>();
+
+        var options = new ImmutableGlobalOptions
         {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions
-            {
-                ProviderId = "provider3"
-            };
+            SourceProvider = expectedProvider,
+            SourceProviderFactory = (ctx) => factoryProvider
+        };
 
-            // Act
-            var result = resolver.ResolveProvider(null, options, out var shouldDispose);
+        var httpContextMock = new Mock<HttpContext>();
 
-            // Assert
-            Assert.Equal("provider3", result?.Id);
-        }
+        // Act
+        var result = _resolver.ResolveProvider(httpContextMock.Object, options, out var shouldDispose);
 
-        [Fact]
-        public void SelectProvider_WithNoSourceIdGeneratedIdFound_ShouldReturnGeneratedProvider()
-        {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions { ProviderId = null };
-
-            // Act
-            var result = resolver.ResolveProvider(null, options, out var shouldDispose);
-
-            // Assert
-            Assert.Equal("provider2", result?.Id);
-        }
-
-        [Fact]
-        public void SelectProvider_WithNoSourceIdGeneratedIdNotFoundNoOps_ShouldReturnDefault()
-        {
-            // Arrange
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions
-            {
-                ProviderId = null,
-                SourceProvider = null,
-                SourceProviderFactory = null
-            };
-
-            // Act
-            var result = resolver.ResolveProvider(null, options, out var shouldDispose);
-
-            // Assert
-            Assert.Equal("provider1", result?.Id);
-        }
-
-        [Fact]
-        public void SelectProvider_WithEmptyProviderList_ShouldWork()
-        {
-            // Arrange
-            var singleProviderMock = _fixture.CreateProviderMock("single-provider");
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions();
-
-            // Act
-            var result = resolver.ResolveProvider(null, options, out var shouldDispose);
-
-            // Assert
-            Assert.Equal("single-provider", result?.Id);
-        }
-
-        [Fact]
-        public void SelectProvider_ProviderIdCaseSensitive_ShouldRespectCase()
-        {
-            // Arrange
-            var caseSensitiveProvider = _fixture.CreateProviderMock("PROVIDER1").Object;
-            var resolver = _fixture.CreateResolver();
-            var options = new ImmutableGlobalOptions();
-
-            // Act
-            var result1 = resolver.ResolveProvider(null, options, out var shouldDispose);
-            var exception = Assert.Throws<InvalidOperationException>(
-                () => resolver.ResolveProvider(null, options, out var shouldDispose));
-
-            // Assert
-            Assert.Equal("PROVIDER1", result1?.Id);
-            Assert.Contains("provider1", exception.Message);
-        }
+        // Assert
+        Assert.Equal(expectedProvider, result);
+        Assert.False(shouldDispose);
     }
 }
