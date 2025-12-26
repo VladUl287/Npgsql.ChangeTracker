@@ -43,9 +43,11 @@ public static class ServiceCollectionExtensions
         ArgumentException.ThrowIfNullOrEmpty(providerId);
         ArgumentException.ThrowIfNullOrEmpty(connectionString);
 
+        ISourceProvider factory() => new NpgsqlOperations(providerId, connectionString);
+
         return services
-            .AddSingleton<ISourceProvider>((_) => new NpgsqlOperations(providerId, connectionString))
-            .AddKeyedSingleton<ISourceProvider>(providerId, (_, _) => new NpgsqlOperations(providerId, connectionString));
+            .AddSingleton((_) => factory())
+            .AddKeyedSingleton(providerId, (_, _) => factory());
     }
 
     public static IServiceCollection AddNpgsqlSource(this IServiceCollection services, string providerId, Action<NpgsqlDataSourceBuilder> configure)
@@ -53,7 +55,7 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configure);
         ArgumentException.ThrowIfNullOrEmpty(providerId);
 
-        ISourceProvider factory(Action<NpgsqlDataSourceBuilder> configure)
+        ISourceProvider factory()
         {
             var dataSourceBuilder = new NpgsqlDataSourceBuilder();
             configure(dataSourceBuilder);
@@ -63,7 +65,7 @@ public static class ServiceCollectionExtensions
         }
 
         return services
-            .AddSingleton((_) => factory(configure))
-            .AddKeyedSingleton(providerId, (_, _) => factory(configure));
+            .AddSingleton((_) => factory())
+            .AddKeyedSingleton(providerId, (_, _) => factory());
     }
 }
