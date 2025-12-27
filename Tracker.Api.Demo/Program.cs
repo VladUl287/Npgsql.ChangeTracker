@@ -13,10 +13,10 @@ var builder = WebApplication.CreateBuilder(args);
 
     builder.Services
         .AddTracker()
+        .AddNpgsqlProvider<DatabaseContext>()
         .AddSqlServerProvider<SqlServerDatabaseContext>()
         .AddNpgsqlProvider("source1", "Host=localhost;Port=5432;Database=test123;Username=postgres;Password=postgres")
         .AddSqlServerProvider("source2", "Server=localhost;Database=TrackerTestDb;Trusted_Connection=true;")
-        .AddNpgsqlProvider<DatabaseContext>()
         ;
 
     builder.Services.AddDbContext<DatabaseContext>(options =>

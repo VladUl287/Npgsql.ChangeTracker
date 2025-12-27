@@ -18,7 +18,7 @@ public class RolesController(DatabaseContext dbContext, SqlServerDatabaseContext
     }
 
     [HttpGet]
-    [Track<DatabaseContext>(["roles"], cacheControl: "max-age=60, stale-while-revalidate=60, stale-if-error=86400")]
+    [Track(["roles"], cacheControl: "max-age=60, stale-while-revalidate=60, stale-if-error=86400")]
     public ActionResult<IEnumerable<Role>> GetAll()
     {
         return dbContext.Roles.ToList();

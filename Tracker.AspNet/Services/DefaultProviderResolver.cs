@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Runtime.CompilerServices;
 using Tracker.AspNet.Logging;
 using Tracker.AspNet.Models;
 using Tracker.AspNet.Services.Contracts;
@@ -10,6 +11,9 @@ namespace Tracker.AspNet.Services;
 
 public sealed class DefaultProviderResolver(ILogger<DefaultProviderResolver> logger) : IProviderResolver
 {
+    private static string? _defaultProviderId;
+    private static readonly Lock _lock = new();
+
     public ISourceProvider ResolveProvider(HttpContext ctx, ImmutableGlobalOptions options, out bool shouldDispose)
     {
         ArgumentNullException.ThrowIfNull(ctx, nameof(ctx));
@@ -40,13 +44,33 @@ public sealed class DefaultProviderResolver(ILogger<DefaultProviderResolver> log
             }
 
             logger.LogResolvingLastRegisteredProvider(traceId);
-            return ctx.RequestServices.GetRequiredService<ISourceProvider>();
+            return GetDefaultProvider(ctx);
         }
         catch (Exception ex)
         {
             logger.LogFailedToResolveSourceProvider(ex, traceId);
             throw new InvalidOperationException(
                 $"Failed to resolve source provider. TraceId: {ctx.TraceIdentifier}", ex);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ISourceProvider GetDefaultProvider(HttpContext ctx)
+    {
+        if (_defaultProviderId is not null)
+            return ctx.RequestServices.GetRequiredKeyedService<ISourceProvider>(_defaultProviderId);
+
+        lock (_lock)
+        {
+            if (_defaultProviderId is not null)
+                return ctx.RequestServices.GetRequiredKeyedService<ISourceProvider>(_defaultProviderId);
+
+            var firstProvider = ctx.RequestServices
+                .GetKeyedServices<ISourceProvider>(KeyedService.AnyKey)
+                .First();
+
+            _defaultProviderId = firstProvider.Id;
+            return firstProvider;
         }
     }
 }

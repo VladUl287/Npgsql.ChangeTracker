@@ -21,9 +21,7 @@ public static class ServiceCollectionExtensions
             _ => throw new InvalidOperationException()
         };
 
-        return services
-            .AddSingleton(factory)
-            .AddKeyedSingleton(providerId, factory);
+        return services.AddKeyedSingleton(providerId, factory);
     }
 
     public static IServiceCollection AddSqlServerProvider<TContext>(this IServiceCollection services, TrackingMode mode = default)
@@ -39,7 +37,7 @@ public static class ServiceCollectionExtensions
     {
         ArgumentException.ThrowIfNullOrEmpty(providerId, nameof(providerId));
 
-        ISourceProvider factory(IServiceProvider provider)
+        return services.AddKeyedSingleton<ISourceProvider>(providerId, (provider, _) =>
         {
             using var scope = provider.CreateScope();
 
@@ -53,10 +51,6 @@ public static class ServiceCollectionExtensions
                 TrackingMode.ChangeTracking => new SqlServerChangeTrackingOperations(providerId, connectionString),
                 _ => throw new InvalidOperationException()
             };
-        }
-
-        return services
-            .AddSingleton(factory)
-            .AddKeyedSingleton(providerId, (provider, _) => factory(provider));
+        });
     }
 }
