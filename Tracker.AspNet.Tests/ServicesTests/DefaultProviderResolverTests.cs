@@ -129,7 +129,7 @@ public class DefaultProviderResolverTests
     }
 
     [Fact]
-    public void ResolveProvider_ShouldResolveLastRegisteredProvider_WhenNoOtherOptionsAreSpecified()
+    public void ResolveProvider_ShouldResolveFirstRegisteredProvider_WhenNoOtherOptionsAreSpecified()
     {
         // Arrange
         var options = new ImmutableGlobalOptions();
@@ -152,6 +152,46 @@ public class DefaultProviderResolverTests
         // Assert
         Assert.Equal(expectedProvider, result);
         Assert.False(shouldDispose);
+    }
+
+    [Fact]
+    public void ResolveProvider_ShouldReturnCachedProvider_WhenDefaultProviderIdIsAlreadySet()
+    {
+        // Arrange
+        var mockHttpContext = new Mock<HttpContext>();
+        var mockServiceProvider = new Mock<IServiceProvider>();
+        var mockSourceProvider = new Mock<ISourceProvider>();
+
+        // Set the static field through reflection
+        var field = typeof(DefaultProviderResolver).GetField("_defaultProviderId",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        field.SetValue(null, "CachedProvider");
+
+        mockSourceProvider.Setup(x => x.Id).Returns("CachedProvider");
+        mockServiceProvider
+            .As<IKeyedServiceProvider>()
+            .Setup(x => x.GetRequiredKeyedService(typeof(ISourceProvider), "CachedProvider"))
+            .Returns(mockSourceProvider.Object);
+        mockHttpContext.Setup(x => x.RequestServices).Returns(mockServiceProvider.Object);
+
+        // Act
+        var result = InvokeGetDefaultProvider(mockHttpContext.Object);
+
+        // Assert
+        Assert.Equal(mockSourceProvider.Object, result);
+        mockServiceProvider
+            .As<IKeyedServiceProvider>()
+            .Verify(x => x.GetRequiredKeyedService(typeof(IEnumerable<ISourceProvider>), KeyedService.AnyKey), Times.Never);
+
+        // Cleanup
+        field.SetValue(null, null);
+    }
+
+    private static ISourceProvider InvokeGetDefaultProvider(HttpContext ctx)
+    {
+        var method = typeof(DefaultProviderResolver).GetMethod("GetDefaultProvider",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        return (ISourceProvider)method.Invoke(null, new object[] { ctx });
     }
 
     [Fact]
